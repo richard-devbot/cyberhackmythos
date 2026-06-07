@@ -26,7 +26,6 @@ def _conv_choices(state_value):
 class GradioEvents:
     """Event handlers for the chatbot UI."""
 
-    # ------------------------------------------------------------------ stream
     @staticmethod
     def stream_response(message, state_value):
         """Stream a chat completion into the active conversation."""
@@ -34,7 +33,6 @@ class GradioEvents:
             yield gr.skip()
             return
 
-        # Create new conversation if there isn't an active one
         if not state_value.get("conversation_id"):
             conv_id = str(uuid.uuid4())
             state_value["conversation_id"] = conv_id
@@ -50,16 +48,13 @@ class GradioEvents:
 
         ctx = state_value["conversation_contexts"][conv_id]
 
-        # Update conversation label if blank
         for c in state_value["conversations"]:
             if c["key"] == conv_id and not c.get("label"):
                 c["label"] = message[:30]
                 break
 
-        # Append user message
         ctx["history"].append({"role": "user", "content": message})
 
-        # Initial yield: clear input, show user message
         yield { msg: gr.update(value=""), chatbot: gr.update(value=ctx["history"]), state: gr.update(value=state_value), conv_choice: _conv_choices(state_value), send_btn: gr.update(visible=False), stop_btn: gr.update(visible=True)}
 
         reasoning_content = ""
@@ -122,11 +117,9 @@ class GradioEvents:
                     state: gr.update(value=state_value),
                 }
 
-            # Persist assistant messages into history
             ctx["history"].extend(partial)
             if temp:
                 ctx["history"].extend(temp)
-            # Mark last assistant message as final
             if ctx["history"] and ctx["history"][-1].get("role") == "assistant":
                 ctx["history"][-1]["is_final"] = True
 
@@ -137,7 +130,7 @@ class GradioEvents:
                 stop_btn: gr.update(visible=False),
             }
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print("model:", model, "-", "Error:", exc)
             ctx["history"].append({
                 "role": "assistant",
@@ -151,7 +144,6 @@ class GradioEvents:
             }
             raise
 
-    # ------------------------------------------------------------ conversations
     @staticmethod
     def new_chat(state_value):
         state_value["conversation_id"] = ""
@@ -213,8 +205,6 @@ class GradioEvents:
             gr.update(value=state_value),
         )
 
-    # ---------------------------------------------------------------- settings
-
     @staticmethod
     def clear_history(state_value):
         if not state_value.get("conversation_id"):
@@ -238,7 +228,6 @@ class GradioEvents:
                 gr.update(value=state_value), gr.update(visible=True),
                 gr.update(visible=False))
 
-    # ----------------------------------------------------------------- state IO
     @staticmethod
     def save_browser_state(state_value):
         return gr.update(value=dict(
@@ -263,7 +252,6 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
     })
 
     with gr.Row(elem_id="main-row"):
-        # ============== Sidebar ============================================
         with gr.Column(scale=0, min_width=260, elem_id="sidebar"):
             new_chat_btn = gr.Button(
                 value="New Conversation",
@@ -280,9 +268,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 variant="stop",
             )
 
-        # ============== Main chat column ==================================
         with gr.Column(scale=1, elem_id="chat-column"):
-            # Action bar
             with gr.Row():
                 clear_btn = gr.Button(
                     value="Clear History",
@@ -291,15 +277,12 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                     visible=False,
                 )
 
-            # Chatbot
             chatbot = gr.Chatbot(
                 elem_id="chatbot",
                 show_label=False,
-                buttons=None,
-                layout="panel"
+                buttons=[],
+                layout="bubble"
             )
-            # Input area (msg must be defined here so the input lives
-            # at the bottom of the column)
             with gr.Row():
                 msg = gr.Textbox(
                     placeholder="Type a message and press Enter...",
@@ -321,37 +304,30 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                     visible=False,
                 )
 
-    # ============== Event wiring ===========================================
-
-    # New chat
     new_chat_btn.click(
         fn=GradioEvents.new_chat,
         inputs=[state],
         outputs=[conv_choice, chatbot, state],
     )
 
-    # Select conversation
     conv_choice.change(
         fn=GradioEvents.select_conversation,
         inputs=[conv_choice, state],
         outputs=[chatbot, state],
     )
 
-    # Delete conversation
     delete_btn.click(
         fn=GradioEvents.delete_selected_conversation,
         inputs=[conv_choice, state],
         outputs=[conv_choice, chatbot, state],
     )
 
-    # Clear history of current conversation
     clear_btn.click(
         fn=GradioEvents.clear_history,
         inputs=[state],
         outputs=[chatbot, state],
     )
 
-    # Send message
     submit_event = send_btn.click(
         fn=GradioEvents.stream_response,
         inputs=[msg, state],
@@ -363,7 +339,6 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
         outputs=[msg, chatbot, state, conv_choice, send_btn, stop_btn],
     )
 
-    # Stop button cancels the streaming
     stop_btn.click(
         fn=GradioEvents.cancel_stream,
         inputs=[state],
@@ -376,8 +351,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
             "conversation_contexts": {},
             "conversations": [],
         },
-        storage_key="chat_app_state",
-        secret="devmode"
+        storage_key="chat_app_state"
     )
     state.change(
         fn=GradioEvents.save_browser_state,

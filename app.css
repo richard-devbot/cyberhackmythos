@@ -30,3 +30,7 @@
   min-height: 100px;
   border: 0;
 }
+
+.icon-button-wrapper {
+  display: hidden;
+}
