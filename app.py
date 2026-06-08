@@ -13,6 +13,51 @@ client = OpenAI(
 )
 model = os.getenv("OPENAI_MODEL")
 
+JS_LOAD_STATE = """(_) => {
+    const titles = JSON.parse(localStorage.getItem("titles") || "{}");
+    const conversations = [];
+    const conversation_contexts = {};
+
+    for (const [id, label] of Object.entries(titles)) {
+        const raw = localStorage.getItem("chat_id_" + id);
+        if (raw) {
+            conversations.push({ key: id, label: label });
+            conversation_contexts[id] = JSON.parse(raw);
+        }
+    }
+
+    return JSON.stringify({ conversations, conversation_contexts });
+}"""
+
+JS_SAVE_STATE = """(stateJson) => {
+    const state = JSON.parse(stateJson);
+    const titles = {};
+
+    for (const conv of (state.conversations || [])) {
+        titles[conv.key] = conv.label;
+        const ctx = (state.conversation_contexts || {})[conv.key];
+        if (ctx !== undefined) {
+            localStorage.setItem("chat_id_" + conv.key, JSON.stringify(ctx));
+        }
+    }
+
+    // Remove stale chat_id_* keys that are no longer in conversations
+    const validIds = new Set(Object.keys(titles));
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("chat_id_")) {
+            const id = k.slice("chat_id_".length);
+            if (!validIds.has(id)) {
+                localStorage.removeItem(k);
+                i--;  // adjust index after removal
+            }
+        }
+    }
+
+    localStorage.setItem("titles", JSON.stringify(titles));
+    return stateJson;  // pass-through so Gradio output still works
+}"""
+
 
 def _conv_choices(state_value):
     return gr.update(
@@ -43,7 +88,7 @@ class GradioEvents:
             }
         else:
             conv_id = state_value["conversation_id"]
-            ctx = state_value["conversation_contexts"].setdefault(
+            state_value["conversation_contexts"].setdefault(
                 conv_id, {"history": []})
 
         ctx = state_value["conversation_contexts"][conv_id]
@@ -194,13 +239,10 @@ class GradioEvents:
             return (
                 _conv_choices(state_value),
                 gr.update(value=None),
-                gr.update(value=True),
                 gr.update(value=state_value),
             )
         return (
             _conv_choices(state_value),
-            gr.skip(),
-            gr.skip(),
             gr.skip(),
             gr.update(value=state_value),
         )
@@ -224,23 +266,31 @@ class GradioEvents:
             ctx["history"][-1]["metadata"] = ctx["history"][-1].get(
                 "metadata", {})
             ctx["history"][-1]["metadata"]["footer"] = "Chat completion paused"
-        return (gr.update(value=ctx.get("history", [])),
-                gr.update(value=state_value), gr.update(visible=True),
-                gr.update(visible=False))
+        return (gr.update(value=ctx.get("history", [])), gr.update(value=state_value), gr.update(visible=True), gr.update(visible=False))
 
     @staticmethod
-    def save_browser_state(state_value):
-        return gr.update(value=dict(
-            conversations=state_value["conversations"],
-            conversation_contexts=state_value["conversation_contexts"]))
-
-    @staticmethod
-    def load_browser_state(browser_state_value, state_value):
-        if not browser_state_value:
+    def load_from_js(serialised_json, state_value):
+        """Receive the JSON string that JS_LOAD_STATE returned, merge into state."""
+        import json
+        if not serialised_json:
             return gr.skip(), gr.skip()
-        state_value["conversations"] = browser_state_value.get("conversations", [])
-        state_value["conversation_contexts"] = browser_state_value.get("conversation_contexts", {})
+        try:
+            loaded = json.loads(serialised_json)
+        except Exception:
+            return gr.skip(), gr.skip()
+
+        state_value["conversations"] = loaded.get("conversations", [])
+        state_value["conversation_contexts"] = loaded.get("conversation_contexts", {})
         return _conv_choices(state_value), gr.update(value=state_value)
+
+    @staticmethod
+    def prepare_save(state_value):
+        """Serialise state to JSON so JS_SAVE_STATE can write it to localStorage."""
+        import json
+        return json.dumps({
+            "conversations": state_value.get("conversations", []),
+            "conversation_contexts": state_value.get("conversation_contexts", {}),
+        })
 
 css = open("./app.css", "r").read()
 
@@ -250,6 +300,9 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
         "conversations": [],
         "conversation_id": "",
     })
+
+    js_load_output = gr.Textbox(visible=False, elem_id="js-load-output")
+    js_save_input  = gr.Textbox(visible=False, elem_id="js-save-input")
 
     with gr.Row(elem_id="main-row"):
         with gr.Column(scale=0, min_width=260, elem_id="sidebar"):
@@ -346,21 +399,25 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
         cancels=[submit_event],
     )
 
-    browser_state = gr.BrowserState(
-        {
-            "conversation_contexts": {},
-            "conversations": [],
-        },
-        storage_key="chat_app_state"
-    )
     state.change(
-        fn=GradioEvents.save_browser_state,
+        fn=GradioEvents.prepare_save,
         inputs=[state],
-        outputs=[browser_state],
+        outputs=[js_save_input],
+    ).then(
+        fn=lambda x: x,
+        inputs=[js_save_input],
+        outputs=[js_save_input],
+        js=JS_SAVE_STATE,
     )
+
     demo.load(
-        fn=GradioEvents.load_browser_state,
-        inputs=[browser_state, state],
+        fn=lambda x: x,
+        inputs=[js_load_output],
+        outputs=[js_load_output],
+        js=JS_LOAD_STATE,
+    ).then(
+        fn=GradioEvents.load_from_js,
+        inputs=[js_load_output, state],
         outputs=[conv_choice, state],
     )
 
