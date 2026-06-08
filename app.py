@@ -61,10 +61,8 @@ JS_SAVE_STATE = """(stateJson) => {
 
 def _conv_choices(state_value):
     return gr.update(
-        choices=[c["label"] for c in state_value["conversations"]],
-        value=next(
-            (c["label"] for c in state_value["conversations"]
-             if c["key"] == state_value.get("conversation_id")), None),
+        choices=[(c["label"], c["key"]) for c in state_value["conversations"]],
+        value=state_value.get("conversation_id") or None,
     )
 
 
@@ -202,16 +200,11 @@ class GradioEvents:
     def select_conversation(choice, state_value):
         if not choice:
             return gr.skip()
-        conv_id = None
-        for c in state_value["conversations"]:
-            if c["label"] == choice:
-                conv_id = c["key"]
-                break
-        if not conv_id or conv_id == state_value.get("conversation_id"):
+        if choice == state_value.get("conversation_id"):
             return gr.skip()
 
-        state_value["conversation_id"] = conv_id
-        ctx = state_value["conversation_contexts"].get(conv_id, {})
+        state_value["conversation_id"] = choice
+        ctx = state_value["conversation_contexts"].get(choice, {})
         return (
             gr.update(value=ctx.get("history", [])),
             gr.update(value=state_value),
@@ -221,19 +214,12 @@ class GradioEvents:
     def delete_selected_conversation(choice, state_value):
         if not choice:
             return gr.skip()
-        target_id = None
-        for c in state_value["conversations"]:
-            if c["label"] == choice:
-                target_id = c["key"]
-                break
-        if not target_id:
-            return gr.skip()
 
-        state_value["conversation_contexts"].pop(target_id, None)
+        state_value["conversation_contexts"].pop(choice, None)
         state_value["conversations"] = [
-            c for c in state_value["conversations"] if c["key"] != target_id
+            c for c in state_value["conversations"] if c["key"] != choice
         ]
-        was_active = state_value.get("conversation_id") == target_id
+        was_active = state_value.get("conversation_id") == choice
         if was_active:
             state_value["conversation_id"] = ""
             return (
@@ -305,7 +291,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
     js_save_input  = gr.Textbox(visible=False, elem_id="js-save-input")
 
     with gr.Row(elem_id="main-row"):
-        with gr.Column(scale=0, min_width=260, elem_id="sidebar"):
+        with gr.Sidebar():
             new_chat_btn = gr.Button(
                 value="New Conversation",
                 variant="primary",
@@ -321,7 +307,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 variant="stop",
             )
 
-        with gr.Column(scale=1, elem_id="chat-column"):
+        with gr.Column(elem_id="chat-column"):
             with gr.Row():
                 clear_btn = gr.Button(
                     value="Clear History",
@@ -347,14 +333,16 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                     "Send",
                     variant="primary",
                     scale=0,
-                    min_width=80,
+                    min_width=40,
+                    elem_id="send-btn",
                 )
                 stop_btn = gr.Button(
                     "Stop",
                     variant="stop",
                     scale=0,
-                    min_width=80,
+                    min_width=40,
                     visible=False,
+                    elem_id="stop-btn",
                 )
 
     new_chat_btn.click(
