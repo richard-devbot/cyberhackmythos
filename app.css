@@ -3,6 +3,8 @@
   --layout-gap: 0 !important;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 html {
   scroll-behavior: smooth;
 }
@@ -18,6 +20,7 @@ html {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  position: relative;
 }
 
 #chatbot {
@@ -135,18 +138,6 @@ label span {
 /* --- Input Area — Docked Bottom --- */
 
 
-/* Style the textbox wrapper to look like ChatGPT's input container */
-#input-row .form {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
-  border: 1px solid var(--border-color-primary) !important;
-}
-
-#input-row .form:focus-within {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
-  border-color: var(--neutral-400) !important;
-}
-
 /* --- Send / Stop Button Micro-animations --- */
 #send-btn, #stop-btn {
   font-size: 0;
@@ -205,4 +196,149 @@ label span {
 .sidebar::-webkit-scrollbar-thumb {
   background: var(--border-color-primary);
   border-radius: 2px;
+}
+
+.input-container textarea {
+  background: transparent !important;
+}
+
+/* ============================================
+   LANDING PAGE - Terminal-inspired Design
+   ============================================ */
+
+#landing-page-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-fill-primary);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+#landing-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* Logo styling */
+.landing-logo {
+  margin-bottom: 100px !important;
+}
+
+.landing-logo svg {
+  height: 60px;
+  width: auto;
+  filter: drop-shadow(0 0 20px rgba(241, 236, 236, 0.1));
+}
+
+/* Hide landing page when chat has messages */
+#landing-page-container.hidden {
+  display: none !important;
+}
+
+/* ============================================
+   INPUT ROW - Terminal-style Global
+   ============================================ */
+
+/* When landing page is visible, center the input row */
+#chat-column.landing-active #input-row {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  z-index: 20;
+}
+
+/* When landing page is hidden (chat active), keep input at bottom */
+#chat-column:not(.landing-active) #input-row {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  max-width: none;
+}
+
+/* Terminal-style input row */
+#input-row {
+  z-index: 15;
+  position: relative;
+}
+
+#input-row .form {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  transition: all 0.2s ease !important;
+}
+
+#input-row .form:focus-within {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Terminal cursor effect on input */
+#input-row textarea,
+#input-row input[type="text"] {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  caret-color: var(--body-text-color) !important;
+  caret-shape: block !important;
+}
+
+/* Blinking cursor animation for input */
+@keyframes inputCursorBlink {
+  0%, 50% { border-right-color: var(--body-text-color); }
+  51%, 100% { border-right-color: transparent; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .landing-content {
+    padding: 20px;
+    gap: 24px;
+  }
+
+  .landing-logo svg {
+    height: 40px;
+  }
+}
+
+/* Apply monospace font to body for terminal feel */
+body, .gradio-container {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+}
+
+/* Chatbot styling when empty */
+#chatbot:empty,
+#chatbot .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Ensure proper z-index stacking */
+#chatbot {
+  z-index: 5;
 }
