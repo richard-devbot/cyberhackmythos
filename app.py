@@ -55,7 +55,7 @@ JS_SAVE_STATE = """(stateJson) => {
     }
 
     localStorage.setItem("titles", JSON.stringify(titles));
-    return stateJson;  // pass-through so Gradio output still works
+    return stateJson;
 }"""
 
 
@@ -234,14 +234,6 @@ class GradioEvents:
         )
 
     @staticmethod
-    def clear_history(state_value):
-        if not state_value.get("conversation_id"):
-            return gr.skip()
-        state_value["conversation_contexts"][
-            state_value["conversation_id"]]["history"] = []
-        return gr.update(value=[]), gr.update(value=state_value)
-
-    @staticmethod
     def cancel_stream(state_value):
         """Mark the current assistant message as cancelled."""
         if not state_value.get("conversation_id"):
@@ -298,23 +290,17 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
             )
             conv_choice = gr.Radio(
                 choices=[],
-                label="Conversations",
+                label=None,
                 interactive=True,
                 elem_id="conversations-radio",
             )
             delete_btn = gr.Button(
                 value="Delete Selected",
                 variant="stop",
+                visible=False
             )
 
         with gr.Column(elem_id="chat-column"):
-            with gr.Row():
-                clear_btn = gr.Button(
-                    value="Clear History",
-                    scale=0,
-                    min_width=120,
-                    visible=False,
-                )
 
             chatbot = gr.Chatbot(
                 elem_id="chatbot",
@@ -322,7 +308,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 buttons=[],
                 layout="bubble"
             )
-            with gr.Row():
+            with gr.Row(elem_id="input-row"):
                 msg = gr.Textbox(
                     placeholder="Type a message and press Enter...",
                     show_label=False,
@@ -361,12 +347,6 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
         fn=GradioEvents.delete_selected_conversation,
         inputs=[conv_choice, state],
         outputs=[conv_choice, chatbot, state],
-    )
-
-    clear_btn.click(
-        fn=GradioEvents.clear_history,
-        inputs=[state],
-        outputs=[chatbot, state],
     )
 
     submit_event = send_btn.click(
