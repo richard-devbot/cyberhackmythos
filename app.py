@@ -18,13 +18,20 @@ JS_LOAD_STATE = """(_) => {
     const conversations = [];
     const conversation_contexts = {};
 
-    for (const [id, label] of Object.entries(titles)) {
+    for (const [id, data] of Object.entries(titles)) {
         const raw = localStorage.getItem("chat_id_" + id);
         if (raw) {
-            conversations.push({ key: id, label: label });
+            const label = typeof data === 'string' ? data : data.label;
+            const last_updated = typeof data === 'string' ? 0 : (data.last_updated || 0);
+            conversations.push({ key: id, label: label, last_updated: last_updated });
             conversation_contexts[id] = JSON.parse(raw);
         }
     }
+
+    // Sort newest first
+    conversations.sort((a, b) => (b.last_updated || 0) - (a.last_updated || 0));
+
+    console.log("Loaded conversations from localStorage:", conversations);
 
     return JSON.stringify({ conversations, conversation_contexts });
 }"""
@@ -34,7 +41,7 @@ JS_SAVE_STATE = """(stateJson) => {
     const titles = {};
 
     for (const conv of (state.conversations || [])) {
-        titles[conv.key] = conv.label;
+        titles[conv.key] = { label: conv.label, last_updated: conv.last_updated || 0 };
         const ctx = (state.conversation_contexts || {})[conv.key];
         if (ctx !== undefined) {
             localStorage.setItem("chat_id_" + conv.key, JSON.stringify(ctx));
@@ -58,10 +65,87 @@ JS_SAVE_STATE = """(stateJson) => {
     return stateJson;
 }"""
 
+LANDING_PAGE_SCRIPT = """() => {
+    // Landing page toggle logic
+    const landingPage = document.getElementById('landing-page-container');
+    const chatbot = document.getElementById('chatbot');
+    const msgInput = document.querySelector('#input-row textarea, #input-row input[type="text"]');
+
+    if (!landingPage || !chatbot) return;
+
+    function toggleLanding() {
+        // Check if chatbot has any messages
+        const messages = chatbot.querySelectorAll('[data-testid="bot"], [data-testid="user"], [class*="message"]');
+        const hasMessages = messages.length > 0;
+
+        // Also check for empty state indicators
+        const emptyState = chatbot.querySelector('.empty-state, .placeholder, [class*="empty"]');
+        const chatColumn = document.getElementById('chat-column');
+
+        if (hasMessages && !emptyState) {
+            landingPage.classList.add('hidden');
+            if (chatColumn) chatColumn.classList.remove('landing-active');
+        } else {
+            landingPage.classList.remove('hidden');
+            if (chatColumn) chatColumn.classList.add('landing-active');
+        }
+    }
+
+    // Initial check
+    toggleLanding();
+
+    // Set up mutation observer to watch for chat changes
+    const observer = new MutationObserver((mutations) => {
+        let shouldToggle = false;
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList' || mutation.type === 'subtree') {
+                shouldToggle = true;
+                break;
+            }
+        }
+        if (shouldToggle) {
+            // Debounce the toggle check
+            clearTimeout(window._landingToggleTimeout);
+            window._landingToggleTimeout = setTimeout(toggleLanding, 100);
+        }
+    });
+
+    observer.observe(chatbot, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class']
+    });
+
+    // Also watch for the input area to handle new chat creation
+    const inputRow = document.getElementById('input-row');
+    if (inputRow) {
+        observer.observe(inputRow, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // Click on landing prompt to focus input
+    const landingPrompt = document.querySelector('.landing-prompt');
+    if (landingPrompt && msgInput) {
+        landingPrompt.addEventListener('click', () => {
+            msgInput.focus();
+            msgInput.click();
+        });
+    }
+
+    // Store reference for cleanup
+    window._landingPageObserver = observer;
+    window._landingPage = landingPage;
+}
+"""
+
 
 def _conv_choices(state_value):
+    convs = sorted(state_value["conversations"], key=lambda c: c.get("last_updated", 0), reverse=True)
     return gr.update(
-        choices=[(c["label"], c["key"]) for c in state_value["conversations"]],
+        choices=[(c["label"], c["key"]) for c in convs],
         value=state_value.get("conversation_id") or None,
     )
 
@@ -80,7 +164,7 @@ class GradioEvents:
             conv_id = str(uuid.uuid4())
             state_value["conversation_id"] = conv_id
             state_value["conversations"].append(
-                {"label": message[:30], "key": conv_id})
+                {"label": message[:30], "key": conv_id, "last_updated": int(time.time() * 1000)})
             state_value["conversation_contexts"][conv_id] = {
                 "history": []
             }
@@ -88,6 +172,11 @@ class GradioEvents:
             conv_id = state_value["conversation_id"]
             state_value["conversation_contexts"].setdefault(
                 conv_id, {"history": []})
+            # Update last_updated for existing conversation
+            for c in state_value["conversations"]:
+                if c["key"] == conv_id:
+                    c["last_updated"] = int(time.time() * 1000)
+                    break
 
         ctx = state_value["conversation_contexts"][conv_id]
 
@@ -269,8 +358,6 @@ class GradioEvents:
             "conversation_contexts": state_value.get("conversation_contexts", {}),
         })
 
-css = open("./app.css", "r").read()
-
 with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
     state = gr.State({
         "conversation_contexts": {},
@@ -312,6 +399,9 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                                 <path d="M0 18H6V30H0V18ZM0 30H24V36H0V30ZM18 18H24V30H18V18ZM30 18H36V30H30V18ZM30 30H54V36H30V30ZM48 18H54V30H48V18ZM60 18H84V24H60V18ZM60 24H66V30H60V24ZM60 30H84V36H60V30ZM90 18H96V36H90V18ZM108 18H114V36H108V18ZM120 18H126V36H120V18ZM132 18H138V24H132V18ZM144 18H150V36H144V18ZM156 18H162V24H156V18ZM156 24H180V30H156V24ZM174 18H180V24H174V18ZM174 30H180V36H174V30ZM192 18H198V30H192V18ZM192 30H204V36H192V30ZM216 18H222V36H216V18ZM234 18H240V36H234V18ZM246 18H252V30H246V18ZM246 30H270V36H246V30ZM264 18H270V30H264V18ZM276 18H300V24H276V18ZM276 30H300V36H276V30ZM294 24H300V30H294V24Z" fill="#B7B1B1"/>
                             </svg>
                         </div>
+                    </div>
+                    <div class="landing-prompt">
+                        <p>Made with ❤️ by KingNish and Himanshu</p>
                     </div>
                 </div>
                 """,
@@ -396,6 +486,11 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
     )
 
     demo.load(
+        fn=lambda: None,
+        inputs=None,
+        outputs=None,
+        js=LANDING_PAGE_SCRIPT,
+    ).then(
         fn=lambda x: x,
         inputs=[js_load_output],
         outputs=[js_load_output],
@@ -404,89 +499,9 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
         fn=GradioEvents.load_from_js,
         inputs=[js_load_output, state],
         outputs=[conv_choice, state],
-    ).then(
-        fn=None,
-        inputs=None,
-        outputs=None,
-        js="""
-        () => {
-            // Landing page toggle logic
-            const landingPage = document.getElementById('landing-page-container');
-            const chatbot = document.getElementById('chatbot');
-            const msgInput = document.querySelector('#input-row textarea, #input-row input[type="text"]');
-
-            if (!landingPage || !chatbot) return;
-
-            function toggleLanding() {
-                // Check if chatbot has any messages
-                const messages = chatbot.querySelectorAll('[data-testid="bot"], [data-testid="user"], [class*="message"]');
-                const hasMessages = messages.length > 0;
-
-                // Also check for empty state indicators
-                const emptyState = chatbot.querySelector('.empty-state, .placeholder, [class*="empty"]');
-                const chatColumn = document.getElementById('chat-column');
-
-                if (hasMessages && !emptyState) {
-                    landingPage.classList.add('hidden');
-                    if (chatColumn) chatColumn.classList.remove('landing-active');
-                } else {
-                    landingPage.classList.remove('hidden');
-                    if (chatColumn) chatColumn.classList.add('landing-active');
-                }
-            }
-
-            // Initial check
-            toggleLanding();
-
-            // Set up mutation observer to watch for chat changes
-            const observer = new MutationObserver((mutations) => {
-                let shouldToggle = false;
-                for (const mutation of mutations) {
-                    if (mutation.type === 'childList' || mutation.type === 'subtree') {
-                        shouldToggle = true;
-                        break;
-                    }
-                }
-                if (shouldToggle) {
-                    // Debounce the toggle check
-                    clearTimeout(window._landingToggleTimeout);
-                    window._landingToggleTimeout = setTimeout(toggleLanding, 100);
-                }
-            });
-
-            observer.observe(chatbot, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['class']
-            });
-
-            // Also watch for the input area to handle new chat creation
-            const inputRow = document.getElementById('input-row');
-            if (inputRow) {
-                observer.observe(inputRow, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-
-            // Click on landing prompt to focus input
-            const landingPrompt = document.querySelector('.landing-prompt');
-            if (landingPrompt && msgInput) {
-                landingPrompt.addEventListener('click', () => {
-                    msgInput.focus();
-                    msgInput.click();
-                });
-            }
-
-            // Store reference for cleanup
-            window._landingPageObserver = observer;
-            window._landingPage = landingPage;
-        }
-        """,
     )
 
 theme = gr.themes.Base(radius_size="none")
 
 if __name__ == "__main__":
-    demo.queue(default_concurrency_limit=100, max_size=100).launch(ssr_mode=False, max_threads=100, css=css, theme=theme)
+    demo.queue(default_concurrency_limit=100, max_size=100).launch(ssr_mode=False, max_threads=100, css_paths="app.css", theme=theme)
