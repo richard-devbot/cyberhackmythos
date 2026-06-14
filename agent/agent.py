@@ -20,24 +20,82 @@ from .tools import Tool
 
 
 class Agent:
-    """OpenAI-compatible tool-calling agent with streaming."""
+    """OpenAI-compatible tool-calling agent with streaming.
 
-    def __init__(self, base_url: str, api_key: str, model: str) -> None:
+    When ``register_final_message_tool()`` is used the model **must** call
+    ``final_message`` to signal completion — plain text responses without
+    the tool will keep the conversation loop alive.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        max_iterations: int = 15,
+    ) -> None:
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
         self._tools: list[Tool] = []
+        self._final_tool_name: str | None = None
+        self._max_iterations = max_iterations
+
+    # ------------------------------------------------------------------
+    # Tool registration
+    # ------------------------------------------------------------------
 
     def register_tool(self, tool: Tool) -> None:
         self._tools.append(tool)
 
+    def register_final_message_tool(self) -> None:
+        """Register a no-input ``final_message`` tool the model **must** call
+        to signal that it is done.
+
+        Until the model calls this tool the agent keeps looping — plain
+        text responses or other tool calls will not end the conversation.
+
+        The tool call is handled internally: no ``tool_call`` /
+        ``tool_output`` events are yielded and the caller only sees a
+        ``done`` event.
+        """
+        self._final_tool_name = "final_message"
+        self._tools.append(
+            Tool(
+                name="final_message",
+                description=(
+                    "Signal that you have completed your response and want "
+                    "to end the conversation. Call this ONLY when you are "
+                    "truly done. Until you call this tool, the conversation "
+                    "will continue. Means you will multiple times answer the"
+                    "same question or can get stuck in loops if you never call it."
+                ),
+                parameters={"type": "object", "properties": {}, "required": []},
+                handler=lambda: "",
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Streaming loop
+    # ------------------------------------------------------------------
+
     def stream(self, messages: list[dict]) -> Generator[dict, None, None]:
-        """Yield streaming events until the model produces a final response.
+        """Yield streaming events until the model calls ``final_message``.
 
         *messages* is mutated in-place — after the generator completes it
-        contains the full conversation history (including assistant replies,
-        tool calls, and tool outputs).
+        contains the full conversation history.
         """
+        iteration = 0
+
         while True:
+            iteration += 1
+            if iteration > self._max_iterations:
+                yield {
+                    "type": "error",
+                    "content": f"Agent did not call final_message after "
+                    f"{self._max_iterations} iterations",
+                }
+                return
+
             specs = [t.to_openai_spec() for t in self._tools] if self._tools else None
 
             collected_content = ""
@@ -47,6 +105,7 @@ class Agent:
                 model=self.model,
                 messages=messages,
                 stream=True,
+                extra_body={"thinking_token_budget": 2000}
             )
             if specs:
                 kwargs["tools"] = specs
@@ -67,6 +126,7 @@ class Agent:
                 # Reasoning (e.g. DeepSeek R1)
                 reasoning = delta.get("reasoning_content") or delta.get("reasoning")
                 if reasoning:
+                    print(reasoning, flush=True, end="")
                     yield {"type": "reasoning", "content": reasoning}
 
                 # Text content
@@ -95,7 +155,7 @@ class Agent:
 
             # --- Handle tool calls ---
             if collected_tool_calls:
-                tool_call_list = []
+                tool_call_list: list[dict[str, Any]] = []
                 for idx in sorted(collected_tool_calls.keys()):
                     tc = collected_tool_calls[idx]
                     tool_call_list.append(
@@ -109,7 +169,8 @@ class Agent:
                         }
                     )
 
-                # Assistant message with tool_calls
+                # Assistant message with tool_calls (appended before we decide
+                # whether to continue or stop so the conversation is coherent)
                 assistant_msg: dict[str, Any] = {
                     "role": "assistant",
                     "content": collected_content or None,
@@ -117,7 +178,25 @@ class Agent:
                 assistant_msg["tool_calls"] = tool_call_list
                 messages.append(assistant_msg)
 
-                # Execute each tool and append results
+                # --- final_message check (handled internally) ---
+                if self._final_tool_name:
+                    for tc_spec in tool_call_list:
+                        if tc_spec["function"]["name"] == self._final_tool_name:
+                            # Dummy tool result so history stays well-formed
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tc_spec["id"],
+                                    "content": "",
+                                }
+                            )
+                            messages.append(
+                                {"role": "assistant", "content": collected_content}
+                            )
+                            yield {"type": "done", "content": collected_content}
+                            return
+
+                # --- Execute real tools ---
                 for tc_spec in tool_call_list:
                     tname = tc_spec["function"]["name"]
                     try:
@@ -131,7 +210,9 @@ class Agent:
                         "arguments": tc_spec["function"]["arguments"],
                     }
 
-                    tool_obj = next((t for t in self._tools if t.name == tname), None)
+                    tool_obj = next(
+                        (t for t in self._tools if t.name == tname), None
+                    )
                     if tool_obj:
                         try:
                             result = tool_obj.run(**targs)
@@ -141,10 +222,13 @@ class Agent:
                         result = f"Error: Tool '{tname}' not found"
 
                     result_str = str(result)
-                    # if result is too long, truncate and indicate truncation
                     if len(result_str) > 5_000:
                         result_str = result_str[:5_000] + "\n...[truncated]"
-                    yield {"type": "tool_output", "name": tname, "content": result_str}
+                    yield {
+                        "type": "tool_output",
+                        "name": tname,
+                        "content": result_str,
+                    }
 
                     messages.append(
                         {
@@ -154,9 +238,18 @@ class Agent:
                         }
                     )
 
-                continue  # Loop back so the model can respond after tools
+                continue  # Loop back — model can call more tools or final_message
 
-            # --- No tool calls — final response ---
+            # --- No tool calls ---
+            if self._final_tool_name:
+                # final_message is expected but wasn't called — keep the
+                # conversation loop alive so the model gets another chance
+                messages.append(
+                    {"role": "assistant", "content": collected_content}
+                )
+                continue  # Loop back
+
+            # No final_message tool registered — normal end
             messages.append({"role": "assistant", "content": collected_content})
             yield {"type": "done", "content": collected_content}
             break

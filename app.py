@@ -15,6 +15,7 @@ agent = Agent(
     model=os.getenv("OPENAI_MODEL"),
 )
 agent.register_tool(FETCH_WEBPAGE_TOOL)
+agent.register_final_message_tool()
 
 # Load JS from external files
 _js_dir = Path(__file__).parent / "static" / "js"
@@ -73,30 +74,34 @@ class GradioEvents:
         # Build display as separate titled messages (smolagents style)
         display_messages: list[dict] = list(ctx["history"])
         text_msg_idx: int | None = None
+        thinking_msg_idx: int | None = None
         tool_call_idx: int | None = None
         spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         spinner_idx = 0
-        is_reasoning = False
 
         try:
             for ev in agent.stream(ctx["history"]):
                 t = ev["type"]
 
                 if t == "reasoning":
-                    is_reasoning = True
                     spinner_idx += 1
                     content = f"<span class=\"thinking-indicator\">{spinner_frames[spinner_idx % len(spinner_frames)]}  Thinking...</span>"
-                    if text_msg_idx is not None:
-                        display_messages[text_msg_idx]["content"] = content
+                    if thinking_msg_idx is not None:
+                        display_messages[thinking_msg_idx]["content"] = content
                     else:
                         display_messages.append({"role": "assistant", "content": content, "metadata": {}})
-                        text_msg_idx = len(display_messages) - 1
+                        thinking_msg_idx = len(display_messages) - 1
 
                 elif t == "text":
-                    if is_reasoning:
-                        is_reasoning = False
-                        if text_msg_idx is not None:
-                            display_messages[text_msg_idx]["content"] = ""
+                    # Remove spinner message if showing — it was a separate bubble
+                    if thinking_msg_idx is not None:
+                        display_messages.pop(thinking_msg_idx)
+                        thinking_msg_idx = None
+                        # Re-index since we popped
+                        if text_msg_idx is not None and thinking_msg_idx is not None:
+                            if  text_msg_idx > thinking_msg_idx:
+                                text_msg_idx -= 1
+
                     if text_msg_idx is not None:
                         display_messages[text_msg_idx]["content"] += ev["content"]
                     else:
@@ -104,10 +109,17 @@ class GradioEvents:
                         text_msg_idx = len(display_messages) - 1
 
                 elif t == "tool_call":
+                    # Remove spinner if present
+                    if thinking_msg_idx is not None:
+                        display_messages.pop(thinking_msg_idx)
+                        if text_msg_idx is not None and text_msg_idx > thinking_msg_idx:
+                            text_msg_idx -= 1
+                        thinking_msg_idx = None
+
                     # Finalize any in-flight text message (keep if it has real content)
                     if text_msg_idx is not None:
                         c = display_messages[text_msg_idx].get("content", "").strip()
-                        if not c or c.startswith("<span"):
+                        if not c:
                             display_messages.pop(text_msg_idx)
                         text_msg_idx = None
                     tool_call_idx = None
@@ -170,7 +182,7 @@ class GradioEvents:
         except Exception as exc:
             display_messages.append({
                 "role": "assistant",
-                "content": f'<span style="color: var(--color-red-500)">{exc}</span>',
+                "content": f'<span style="color: var(--color-red-600)">{exc}</span>',
                 "metadata": {"title": "💥 Error"},
             })
             yield {
