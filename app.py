@@ -1,19 +1,20 @@
 import time
 import uuid
 import gradio as gr
-from openai import OpenAI
 from dotenv import load_dotenv
+from agent import Agent, FETCH_WEBPAGE_TOOL
 import os
 from pathlib import Path
 
 load_dotenv()
 gr.set_static_paths("static/")
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
+agent = Agent(
     base_url=os.getenv("OPENAI_BASE_URL"),
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model=os.getenv("OPENAI_MODEL"),
 )
-model = os.getenv("OPENAI_MODEL")
+agent.register_tool(FETCH_WEBPAGE_TOOL)
 
 # Load JS from external files
 _js_dir = Path(__file__).parent / "static" / "js"
@@ -69,53 +70,73 @@ class GradioEvents:
 
         yield { msg: gr.update(value=""), chatbot: gr.update(value=ctx["history"]), state: gr.update(value=state_value), conv_choice: _conv_choices(state_value), send_btn: gr.update(visible=False), stop_btn: gr.update(visible=True)}
 
-        normal_content = ""
+        # Agent will populate ctx["history"] with assistant + tool messages
+        display_buffer = ""
         is_reasoning = False
         spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         spinner_idx = 0
-        temp = []
 
         try:
-            stream = client.chat.completions.create(
-                model=model,
-                messages=ctx["history"],
-                stream=True
-            )
+            for ev in agent.stream(ctx["history"]):
+                t = ev["type"]
 
-            for chunk in stream:
-                chunk = chunk.to_dict()
-                delta = chunk['choices'][0]['delta']
-
-                if delta.get('reasoning_content') or delta.get('reasoning'):
+                if t == "reasoning":
                     if not is_reasoning:
                         is_reasoning = True
                     spinner_idx += 1
-                    temp = [{
+                    if display_buffer:
+                        temp = [{"role": "assistant", "content": display_buffer}]
+                    else:
+                        temp = []
+                    temp.append({
                         "role": "assistant",
                         "content": f"<span class=\"thinking-indicator\">{spinner_frames[spinner_idx % len(spinner_frames)]}  Thinking...</span>",
-                        "metadata": None,
-                        "is_final": False,
-                    }]
-                elif delta.get('content', ''):
+                    })
+
+                elif t == "text":
                     if is_reasoning:
                         is_reasoning = False
-                    normal_content += delta['content']
-                    temp = [{
+                    display_buffer += ev["content"]
+                    temp = [{"role": "assistant", "content": display_buffer}]
+
+                elif t == "tool_call":
+                    display_buffer += (
+                        f'\n<div class="tool-call">'
+                        f'🔧 <strong>{ev["name"]}</strong>'
+                        f'<pre style="display:inline;font-size:0.85em">({ev["arguments"]})</pre>'
+                        f'</div>'
+                    )
+                    temp = [{"role": "assistant", "content": display_buffer}]
+
+                elif t == "tool_output":
+                    display_buffer += (
+                        f'\n<div class="tool-output">'
+                        f'📄 <em>({len(ev["content"])} chars)</em>'
+                        f'</div>'
+                    )
+                    temp = [{"role": "assistant", "content": display_buffer}]
+
+                elif t == "error":
+                    ctx["history"].append({
                         "role": "assistant",
-                        "content": normal_content,
-                        "metadata": None,
-                        "is_final": False,
-                    }]
+                        "content": f'<span style="color: var(--color-red-500)">{ev["content"]}</span>',
+                    })
+                    yield {
+                        chatbot: gr.update(value=ctx["history"]),
+                        state: gr.update(value=state_value),
+                        send_btn: gr.update(visible=True),
+                        stop_btn: gr.update(visible=False),
+                    }
+                    return
+
+                elif t == "done":
+                    # Agent has fully populated ctx["history"]
+                    break
 
                 yield {
                     chatbot: gr.update(value=ctx["history"] + temp),
                     state: gr.update(value=state_value),
                 }
-
-            if not is_reasoning and temp:
-                ctx["history"].extend(temp)
-                if ctx["history"][-1].get("role") == "assistant":
-                    ctx["history"][-1]["is_final"] = True
 
             yield {
                 chatbot: gr.update(value=ctx["history"]),
