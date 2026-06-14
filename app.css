@@ -5,6 +5,10 @@
   --layout-gap: 0 !important;
 }
 
+footer {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -12,6 +16,10 @@ html {
 #main-row {
   height: 100vh;
   max-height: 1500px;
+}
+
+button[aria-label="Clear"] {
+  display: none;
 }
 
 #chat-column {
@@ -210,7 +218,11 @@ label span {
 }
 
 .input-container textarea {
-  background: transparent !important;
+  background: var(--background-fill-secondary) !important;
+}
+
+.bubble-wrap {
+  background: var(--background-fill-primary) !important;
 }
 
 /* ============================================
@@ -270,7 +282,7 @@ label span {
   text-align: center;
 }
 
-body:not(.dark) .landing-logo svg, body:not(.dark) .sidebar-content::before {
+body:not(.dark) .landing-logo img, body:not(.dark) .sidebar-content::before {
   filter: invert(0.8);
 }
 
@@ -300,7 +312,7 @@ body:not(.dark) .landing-logo svg, body:not(.dark) .sidebar-content::before {
 /* When landing page is hidden (chat active), keep input at bottom */
 #chat-column:not(.landing-active) #input-row {
   position: relative;
-  bottom: auto;
+  bottom: 3%;
   left: auto;
   transform: none;
   max-width: none;
@@ -349,6 +361,14 @@ body:not(.dark) .landing-logo svg, body:not(.dark) .sidebar-content::before {
 
   .landing-logo svg {
     height: 40px;
+  }
+}
+
+/* Center chat column on larger screens */
+@media (min-width: 749px) {
+  #chat-column {
+    max-width: 748px;
+    margin: 0 auto;
   }
 }
 

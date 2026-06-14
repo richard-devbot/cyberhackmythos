@@ -69,11 +69,10 @@ class GradioEvents:
 
         yield { msg: gr.update(value=""), chatbot: gr.update(value=ctx["history"]), state: gr.update(value=state_value), conv_choice: _conv_choices(state_value), send_btn: gr.update(visible=False), stop_btn: gr.update(visible=True)}
 
-        reasoning_content = ""
         normal_content = ""
-        reasoning_started = False
-        start_time = time.time()
-        partial = []
+        is_reasoning = False
+        spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        spinner_idx = 0
         temp = []
 
         try:
@@ -87,35 +86,19 @@ class GradioEvents:
                 chunk = chunk.to_dict()
                 delta = chunk['choices'][0]['delta']
 
-                if delta.get('reasoning_content'):
-                    reasoning_content += delta['reasoning_content']
-                    if not reasoning_started:
-                        start_time = time.time()
-                        if normal_content:
-                            partial.append({
-                                "role": "assistant",
-                                "content": normal_content,
-                                "metadata": None,
-                                "is_final": True,
-                            })
-                            normal_content = ""
-                        reasoning_started = True
+                if delta.get('reasoning_content') or delta.get('reasoning'):
+                    if not is_reasoning:
+                        is_reasoning = True
+                    spinner_idx += 1
                     temp = [{
                         "role": "assistant",
-                        "content": reasoning_content,
-                        "metadata": {"title": "Thinking..."},
+                        "content": f"<span class=\"thinking-indicator\">{spinner_frames[spinner_idx % len(spinner_frames)]}  Thinking...</span>",
+                        "metadata": None,
                         "is_final": False,
                     }]
                 elif delta.get('content', ''):
-                    if reasoning_started:
-                        reasoning_started = False
-                        partial.append({
-                            "role": "assistant",
-                            "content": reasoning_content,
-                            "metadata": {"title": "Thought for " + f"{time.time() - start_time:.2f}s"},
-                            "is_final": True,
-                        })
-                        reasoning_content = ""
+                    if is_reasoning:
+                        is_reasoning = False
                     normal_content += delta['content']
                     temp = [{
                         "role": "assistant",
@@ -125,15 +108,14 @@ class GradioEvents:
                     }]
 
                 yield {
-                    chatbot: gr.update(value=ctx["history"] + partial + temp),
+                    chatbot: gr.update(value=ctx["history"] + temp),
                     state: gr.update(value=state_value),
                 }
 
-            ctx["history"].extend(partial)
-            if temp:
+            if not is_reasoning and temp:
                 ctx["history"].extend(temp)
-            if ctx["history"] and ctx["history"][-1].get("role") == "assistant":
-                ctx["history"][-1]["is_final"] = True
+                if ctx["history"][-1].get("role") == "assistant":
+                    ctx["history"][-1]["is_final"] = True
 
             yield {
                 chatbot: gr.update(value=ctx["history"]),
@@ -248,7 +230,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
     js_save_input  = gr.Textbox(visible=False, elem_id="js-save-input")
 
     with gr.Row(elem_id="main-row"):
-        with gr.Sidebar():
+        with gr.Sidebar(open=False):
             new_chat_btn = gr.Button(
                 value="New Conversation",
                 variant="primary",
@@ -273,7 +255,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 <div id="landing-page">
                     <div class="landing-content">
                         <div class="landing-logo">
-                            <img src="/gradio_api/file=static/svg/logo.svg" alt="MythosHarness" width="300" height="42" />
+                            <img src="/gradio_api/file=static/svg/logo.svg" alt="MythosHarness" width="420" height="70" />
                         </div>
                     </div>
                     <div class="landing-prompt">
