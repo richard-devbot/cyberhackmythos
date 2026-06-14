@@ -4,8 +4,10 @@ import gradio as gr
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 load_dotenv()
+gr.set_static_paths("static/")
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -13,133 +15,11 @@ client = OpenAI(
 )
 model = os.getenv("OPENAI_MODEL")
 
-JS_LOAD_STATE = """(_) => {
-    const titles = JSON.parse(localStorage.getItem("titles") || "{}");
-    const conversations = [];
-    const conversation_contexts = {};
-
-    for (const [id, data] of Object.entries(titles)) {
-        const raw = localStorage.getItem("chat_id_" + id);
-        if (raw) {
-            const label = typeof data === 'string' ? data : data.label;
-            const last_updated = typeof data === 'string' ? 0 : (data.last_updated || 0);
-            conversations.push({ key: id, label: label, last_updated: last_updated });
-            conversation_contexts[id] = JSON.parse(raw);
-        }
-    }
-
-    // Sort newest first
-    conversations.sort((a, b) => (b.last_updated || 0) - (a.last_updated || 0));
-
-    console.log("Loaded conversations from localStorage:", conversations);
-
-    return JSON.stringify({ conversations, conversation_contexts });
-}"""
-
-JS_SAVE_STATE = """(stateJson) => {
-    const state = JSON.parse(stateJson);
-    const titles = {};
-
-    for (const conv of (state.conversations || [])) {
-        titles[conv.key] = { label: conv.label, last_updated: conv.last_updated || 0 };
-        const ctx = (state.conversation_contexts || {})[conv.key];
-        if (ctx !== undefined) {
-            localStorage.setItem("chat_id_" + conv.key, JSON.stringify(ctx));
-        }
-    }
-
-    // Remove stale chat_id_* keys that are no longer in conversations
-    const validIds = new Set(Object.keys(titles));
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("chat_id_")) {
-            const id = k.slice("chat_id_".length);
-            if (!validIds.has(id)) {
-                localStorage.removeItem(k);
-                i--;  // adjust index after removal
-            }
-        }
-    }
-
-    localStorage.setItem("titles", JSON.stringify(titles));
-    return stateJson;
-}"""
-
-LANDING_PAGE_SCRIPT = """() => {
-    // Landing page toggle logic
-    const landingPage = document.getElementById('landing-page-container');
-    const chatbot = document.getElementById('chatbot');
-    const msgInput = document.querySelector('#input-row textarea, #input-row input[type="text"]');
-
-    if (!landingPage || !chatbot) return;
-
-    function toggleLanding() {
-        // Check if chatbot has any messages
-        const messages = chatbot.querySelectorAll('[data-testid="bot"], [data-testid="user"], [class*="message"]');
-        const hasMessages = messages.length > 0;
-
-        // Also check for empty state indicators
-        const emptyState = chatbot.querySelector('.empty-state, .placeholder, [class*="empty"]');
-        const chatColumn = document.getElementById('chat-column');
-
-        if (hasMessages && !emptyState) {
-            landingPage.classList.add('hidden');
-            if (chatColumn) chatColumn.classList.remove('landing-active');
-        } else {
-            landingPage.classList.remove('hidden');
-            if (chatColumn) chatColumn.classList.add('landing-active');
-        }
-    }
-
-    // Initial check
-    toggleLanding();
-
-    // Set up mutation observer to watch for chat changes
-    const observer = new MutationObserver((mutations) => {
-        let shouldToggle = false;
-        for (const mutation of mutations) {
-            if (mutation.type === 'childList' || mutation.type === 'subtree') {
-                shouldToggle = true;
-                break;
-            }
-        }
-        if (shouldToggle) {
-            // Debounce the toggle check
-            clearTimeout(window._landingToggleTimeout);
-            window._landingToggleTimeout = setTimeout(toggleLanding, 100);
-        }
-    });
-
-    observer.observe(chatbot, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class']
-    });
-
-    // Also watch for the input area to handle new chat creation
-    const inputRow = document.getElementById('input-row');
-    if (inputRow) {
-        observer.observe(inputRow, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    // Click on landing prompt to focus input
-    const landingPrompt = document.querySelector('.landing-prompt');
-    if (landingPrompt && msgInput) {
-        landingPrompt.addEventListener('click', () => {
-            msgInput.focus();
-            msgInput.click();
-        });
-    }
-
-    // Store reference for cleanup
-    window._landingPageObserver = observer;
-    window._landingPage = landingPage;
-}
-"""
+# Load JS from external files
+_js_dir = Path(__file__).parent / "static" / "js"
+JS_LOAD_STATE = (_js_dir / "storage.load.js").read_text()
+JS_SAVE_STATE = (_js_dir / "storage.save.js").read_text()
+LANDING_PAGE_SCRIPT = (_js_dir / "landing.js").read_text()
 
 
 def _conv_choices(state_value):
@@ -263,7 +143,6 @@ class GradioEvents:
             }
 
         except Exception as exc:
-            print("model:", model, "-", "Error:", exc)
             ctx["history"].append({
                 "role": "assistant",
                 "content": f'<span style="color: var(--color-red-500)">{exc}</span>',
@@ -394,10 +273,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 <div id="landing-page">
                     <div class="landing-content">
                         <div class="landing-logo">
-                            <svg width="300" height="42" viewBox="0 0 300 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M0 6H24V12H0V6ZM0 12H6V18H0V12ZM18 12H24V18H18V12ZM30 6H54V12H30V6ZM30 12H36V18H30V12ZM30 36H36V42H30V36ZM48 12H54V18H48V12ZM60 6H84V12H60V6ZM60 12H66V18H60V12ZM78 12H84V18H78V12ZM90 6H114V12H90V6ZM90 12H96V18H90V12ZM108 12H114V18H108V12ZM120 6H150V12H120V6ZM120 12H126V18H120V12ZM132 12H138V18H132V12ZM144 12H150V18H144V12ZM156 6H162V18H156V6ZM174 6H180V18H174V6ZM174 36H180V42H174V36ZM186 6H210V12H186V6ZM192 0H198V6H192V0ZM192 12H198V18H192V12ZM216 0H222V12H216V0ZM216 12H240V18H216V12ZM246 6H270V12H246V6ZM246 12H252V18H246V12ZM264 12H270V18H264V12ZM276 6H300V12H276V6ZM276 12H282V18H276V12Z" fill="#F1ECEC"/>
-                                <path d="M0 18H6V30H0V18ZM0 30H24V36H0V30ZM18 18H24V30H18V18ZM30 18H36V30H30V18ZM30 30H54V36H30V30ZM48 18H54V30H48V18ZM60 18H84V24H60V18ZM60 24H66V30H60V24ZM60 30H84V36H60V30ZM90 18H96V36H90V18ZM108 18H114V36H108V18ZM120 18H126V36H120V18ZM132 18H138V24H132V18ZM144 18H150V36H144V18ZM156 18H162V24H156V18ZM156 24H180V30H156V24ZM174 18H180V24H174V18ZM174 30H180V36H174V30ZM192 18H198V30H192V18ZM192 30H204V36H192V30ZM216 18H222V36H216V18ZM234 18H240V36H234V18ZM246 18H252V30H246V18ZM246 30H270V36H246V30ZM264 18H270V30H264V18ZM276 18H300V24H276V18ZM276 30H300V36H276V30ZM294 24H300V30H294V24Z" fill="#B7B1B1"/>
-                            </svg>
+                            <img src="/gradio_api/file=static/svg/logo.svg" alt="MythosHarness" width="300" height="42" />
                         </div>
                     </div>
                     <div class="landing-prompt">
