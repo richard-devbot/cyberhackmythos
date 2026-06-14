@@ -390,3 +390,7 @@ body, .gradio-container {
 #chatbot {
   z-index: 5;
 }
+
+.message-wrap {
+  margin-bottom: 40px;
+}

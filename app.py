@@ -70,59 +70,79 @@ class GradioEvents:
 
         yield { msg: gr.update(value=""), chatbot: gr.update(value=ctx["history"]), state: gr.update(value=state_value), conv_choice: _conv_choices(state_value), send_btn: gr.update(visible=False), stop_btn: gr.update(visible=True)}
 
-        # Agent will populate ctx["history"] with assistant + tool messages
-        display_buffer = ""
-        is_reasoning = False
+        # Build display as separate titled messages (smolagents style)
+        display_messages: list[dict] = list(ctx["history"])
+        text_msg_idx: int | None = None
+        tool_call_idx: int | None = None
         spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         spinner_idx = 0
+        is_reasoning = False
 
         try:
             for ev in agent.stream(ctx["history"]):
                 t = ev["type"]
 
                 if t == "reasoning":
-                    if not is_reasoning:
-                        is_reasoning = True
+                    is_reasoning = True
                     spinner_idx += 1
-                    if display_buffer:
-                        temp = [{"role": "assistant", "content": display_buffer}]
+                    content = f"<span class=\"thinking-indicator\">{spinner_frames[spinner_idx % len(spinner_frames)]}  Thinking...</span>"
+                    if text_msg_idx is not None:
+                        display_messages[text_msg_idx]["content"] = content
                     else:
-                        temp = []
-                    temp.append({
-                        "role": "assistant",
-                        "content": f"<span class=\"thinking-indicator\">{spinner_frames[spinner_idx % len(spinner_frames)]}  Thinking...</span>",
-                    })
+                        display_messages.append({"role": "assistant", "content": content, "metadata": {}})
+                        text_msg_idx = len(display_messages) - 1
 
                 elif t == "text":
                     if is_reasoning:
                         is_reasoning = False
-                    display_buffer += ev["content"]
-                    temp = [{"role": "assistant", "content": display_buffer}]
+                        if text_msg_idx is not None:
+                            display_messages[text_msg_idx]["content"] = ""
+                    if text_msg_idx is not None:
+                        display_messages[text_msg_idx]["content"] += ev["content"]
+                    else:
+                        display_messages.append({"role": "assistant", "content": ev["content"], "metadata": {}})
+                        text_msg_idx = len(display_messages) - 1
 
                 elif t == "tool_call":
-                    display_buffer += (
-                        f'\n<div class="tool-call">'
-                        f'🔧 <strong>{ev["name"]}</strong>'
-                        f'<pre style="display:inline;font-size:0.85em">({ev["arguments"]})</pre>'
-                        f'</div>'
-                    )
-                    temp = [{"role": "assistant", "content": display_buffer}]
+                    # Finalize any in-flight text message (keep if it has real content)
+                    if text_msg_idx is not None:
+                        c = display_messages[text_msg_idx].get("content", "").strip()
+                        if not c or c.startswith("<span"):
+                            display_messages.pop(text_msg_idx)
+                        text_msg_idx = None
+                    tool_call_idx = None
+
+                    tool_name = ev["name"]
+                    display_messages.append({
+                        "role": "assistant",
+                        "content": f"```\n{tool_name}({ev['arguments']})\n```\n⏳ Running...",
+                        "metadata": {"title": f"🛠️ Used tool {tool_name}"},
+                    })
+                    tool_call_idx = len(display_messages) - 1
 
                 elif t == "tool_output":
-                    display_buffer += (
-                        f'\n<div class="tool-output">'
-                        f'📄 <em>({len(ev["content"])} chars)</em>'
-                        f'</div>'
-                    )
-                    temp = [{"role": "assistant", "content": display_buffer}]
+                    if tool_call_idx is not None:
+                        snippet = ev["content"][:500]
+                        cc = snippet if len(ev["content"]) <= 500 else snippet + "\n..."
+                        # Grab the tool name from the existing message
+                        tool_name = display_messages[tool_call_idx]["metadata"]["title"].split("Used tool ")[-1]
+                        display_messages[tool_call_idx]["content"] = (
+                            f"```\n{tool_name}(...)\n```\n\n"
+                            f"**Output:**\n```\n{cc}\n```"
+                        )
+                        display_messages[tool_call_idx]["metadata"] = {
+                            "title": f"🛠️ {tool_name} — {len(ev['content'])} chars",
+                        }
+                        tool_call_idx = None
 
                 elif t == "error":
-                    ctx["history"].append({
+                    display_messages.append({
                         "role": "assistant",
                         "content": f'<span style="color: var(--color-red-500)">{ev["content"]}</span>',
+                        "metadata": {"title": "💥 Error"},
                     })
                     yield {
-                        chatbot: gr.update(value=ctx["history"]),
+                        chatbot: gr.update(value=display_messages),
                         state: gr.update(value=state_value),
                         send_btn: gr.update(visible=True),
                         stop_btn: gr.update(visible=False),
@@ -130,13 +150,15 @@ class GradioEvents:
                     return
 
                 elif t == "done":
-                    # Agent has fully populated ctx["history"]
                     break
 
                 yield {
-                    chatbot: gr.update(value=ctx["history"] + temp),
+                    chatbot: gr.update(value=display_messages),
                     state: gr.update(value=state_value),
                 }
+
+            # Sync history with display format so saves remember tool call bubbles
+            ctx["history"] = display_messages
 
             yield {
                 chatbot: gr.update(value=ctx["history"]),
@@ -146,12 +168,13 @@ class GradioEvents:
             }
 
         except Exception as exc:
-            ctx["history"].append({
+            display_messages.append({
                 "role": "assistant",
                 "content": f'<span style="color: var(--color-red-500)">{exc}</span>',
+                "metadata": {"title": "💥 Error"},
             })
             yield {
-                chatbot: gr.update(value=ctx["history"]),
+                chatbot: gr.update(value=display_messages),
                 state: gr.update(value=state_value),
                 send_btn: gr.update(visible=True),
                 stop_btn: gr.update(visible=False),
