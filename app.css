@@ -1,0 +1,396 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+.gradio-container, .main {
+  padding: 0 !important;
+  --layout-gap: 0 !important;
+}
+
+footer {
+  display: none !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+#main-row {
+  height: 100vh;
+  max-height: 1500px;
+}
+
+button[aria-label="Clear"] {
+  display: none;
+}
+
+#chat-column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+#chatbot {
+  flex: 1;
+  min-height: 100px;
+  border: 0;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border-color-primary);
+  box-shadow: none;
+}
+
+.sidebar-parent:has(.sidebar.open:not(.right)) {
+  padding-left: 320px;
+}
+
+.sidebar-content {
+  position: relative;
+  padding: 50px 0 0 0 !important;
+  background: none;
+}
+
+.sidebar-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/gradio_api/file=static/svg/logo.svg") no-repeat top;
+  background-size: 180px 52px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.toggle-button {
+  top: 10px;
+}
+
+/* New Conversation button - top spacing */
+.sidebar > :first-child {
+  margin-bottom: 8px;
+}
+
+/* Sidebar buttons (New/Del) */
+#main-row .sidebar button {
+  transition: all 0.15s ease;
+}
+
+#main-row .sidebar button:hover {
+  transform: translateY(-1px);
+}
+
+.sidebar-content .form {
+  border: 0;
+  background: transparent;
+}
+
+.wrap {
+  gap: 0;
+}
+
+/* Conversation items — card-style list */
+#conversations-radio {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#conversations-radio > div:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+#conversations-radio input[type="radio"] {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+#conversations-radio span[data-testid="block-info"] {
+  display: none;
+}
+
+#conversations-radio label {
+  padding: 10px 14px;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--button-secondary-text-color);
+  border-bottom: 1px solid var(--border-color-primary);
+}
+
+label span {
+  margin: 0;
+}
+
+.icon-button-wrapper {
+  display: hidden;
+}
+
+/* --- Chat Message Animations --- */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animate new messages as they appear */
+#chatbot [data-testid="bot"],
+#chatbot [data-testid="user"],
+#chatbot [class*="message"] {
+  animation: messageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Input Area — Docked Bottom --- */
+
+
+/* --- Send / Stop Button Micro-animations --- */
+#send-btn, #stop-btn {
+  font-size: 0;
+  height: 100%;
+  min-width: 40px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  cursor: pointer;
+  padding: 0;
+}
+
+#send-btn::after {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url("/gradio_api/file=static/svg/send.svg") no-repeat center;
+  background-size: contain;
+}
+
+#stop-btn::after {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url("/gradio_api/file=static/svg/stop.svg") no-repeat center;
+  background-size: contain;
+}
+
+/* --- Custom Scrollbars --- */
+#chatbot::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chatbot::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chatbot::-webkit-scrollbar-thumb {
+  background: var(--border-color-primary);
+  transition: background 0.2s ease;
+}
+
+#chatbot::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-400);
+}
+
+/* Sidebar scrollbar — thinner, subtle */
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-color-primary);
+  border-radius: 2px;
+}
+
+.input-container textarea {
+  background: var(--background-fill-secondary) !important;
+}
+
+.bubble-wrap {
+  background: var(--background-fill-primary) !important;
+}
+
+/* ============================================
+   LANDING PAGE - Terminal-inspired Design
+   ============================================ */
+
+#landing-page-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-fill-primary);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+#landing-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* Logo styling */
+.landing-logo {
+  margin-bottom: 100px !important;
+}
+
+.landing-logo svg {
+  height: 60px;
+  width: auto;
+}
+
+/* Hide landing page when chat has messages */
+#landing-page-container.hidden {
+  display: none !important;
+}
+
+.landing-prompt {
+  bottom: 5%;
+  position: absolute;
+  text-align: center;
+}
+
+body:not(.dark) .landing-logo img, body:not(.dark) .sidebar-content::before {
+  filter: invert(0.8);
+}
+
+/* ============================================
+   INPUT ROW - Terminal-style Global
+   ============================================ */
+
+/* When landing page is visible, center the input row */
+#chat-column.landing-active #input-row {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  z-index: 20;
+}
+
+#chat-column.landing-active #send-btn,
+#chat-column.landing-active #stop-btn {
+  align-self: stretch;
+  min-width: 56px;
+  padding: 0 8px;
+  height: auto;
+}
+
+/* When landing page is hidden (chat active), keep input at bottom */
+#chat-column:not(.landing-active) #input-row {
+  position: relative;
+  bottom: 3%;
+  left: auto;
+  transform: none;
+  max-width: none;
+}
+
+/* Terminal-style input row */
+#input-row {
+  z-index: 15;
+  position: relative;
+}
+
+#input-row .form {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  transition: all 0.2s ease !important;
+}
+
+#input-row .form:focus-within {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Terminal cursor effect on input */
+#input-row textarea,
+#input-row input[type="text"] {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+  caret-color: var(--body-text-color) !important;
+  caret-shape: block !important;
+}
+
+/* Blinking cursor animation for input */
+@keyframes inputCursorBlink {
+  0%, 50% { border-right-color: var(--body-text-color); }
+  51%, 100% { border-right-color: transparent; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .landing-content {
+    padding: 20px;
+    gap: 24px;
+  }
+
+  .landing-logo svg {
+    height: 40px;
+  }
+}
+
+/* Center chat column on larger screens */
+@media (min-width: 749px) {
+  #chat-column {
+    max-width: 748px;
+    margin: 0 auto;
+  }
+}
+
+/* Apply monospace font to body for terminal feel */
+body, .gradio-container {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+}
+
+/* Chatbot styling when empty */
+#chatbot:empty,
+#chatbot .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Ensure proper z-index stacking */
+#chatbot {
+  z-index: 5;
+}
+
+.message-wrap {
+  margin-bottom: 40px;
+}
