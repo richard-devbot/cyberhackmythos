@@ -182,96 +182,91 @@ def _shell_handler(
     command: str,
     session_id: str = "",
     input_text: str = "",
-    timeout: float = 15.0,
-) -> Generator[str, None, None]:
-    """Run a shell command with streaming output.
+) -> str:
+    """Run shell commands interactively.
 
-    command (required): The shell command to execute
-    session_id: Session ID to send input to (omit to auto-generate)
+    command (required): The shell command to execute (omit when checking output or sending input)
+    session_id: Session ID to check output or send input to (omit to start new command)
     input_text: Text to send to running session's stdin
-    timeout: Seconds between output updates (default 15)
+
+    How it works:
+    - Start new command: returns session_id immediately (non-blocking)
+    - Check output: call with session_id to get current output
+    - Send input: call with session_id + input_text
+    - Command runs in background, never blocks the agent
     """
     manager = get_shell_manager()
 
-    # Check if session_id refers to an existing session
     existing_session = session_id and session_id in manager.sessions
 
-    # If session exists and has input, send it
+    # Send input to running session
     if existing_session and input_text:
         sent = manager.send_input(session_id, input_text)
         if not sent:
-            yield f"Error: Session '{session_id}' closed or cannot accept input"
-            return
-        time.sleep(0.5)
+            return f"Error: Session '{session_id}' closed"
+        time.sleep(0.3)
         output = manager.poll_output(session_id)
-        if output:
-            yield f"Sent input. New output:\n{output}"
-        else:
-            yield "Input sent (no new output yet)"
-        return
-
-    # If session exists without input, return current output
-    if existing_session:
-        output = manager.get_output(session_id)
-        if output is None:
-            yield f"Error: Session '{session_id}' not found"
-            return
         running = manager.is_running(session_id)
         status = "running" if running else f"exited (code {manager.sessions[session_id].returncode})"
-        yield f"Session {session_id} [{status}]:\n{output}"
-        return
+        if output:
+            return f"[{session_id}] {status}:\n{output}"
+        return f"[{session_id}] {status} (no new output)"
 
-    # Start new command (with provided session_id or auto-generated)
+    # Check output of existing session
+    if existing_session:
+        output = manager.get_output(session_id)
+        running = manager.is_running(session_id)
+        code = manager.sessions[session_id].returncode
+        status = "running" if running else f"exited with code {code}"
+        if output:
+            return f"[{session_id}] {status}:\n{output}"
+        return f"[{session_id}] {status}"
+
+    # Start new command
     sid = session_id or str(_uuid.uuid4())[:8]
     session = manager.start(sid, command)
-    yield f"Started session {sid} (PID {session.pid})"
 
-    # Stream output — poll frequently, yield when there's new output
-    last_yield = time.time()
-    while session.is_running():
-        time.sleep(0.5)
-        output = session.read_new_output()
+    # Wait a bit to capture initial output (fast commands finish here)
+    time.sleep(0.5)
+    initial = session.read_new_output()
+    running = session.is_running()
+
+    if not running:
+        # Command finished quickly
+        code = session.process.returncode
+        final = session.read_new_output()
+        output = (initial + final).strip()
         if output:
-            print(f"Debug: New output for session {sid}:\n{output}")
-            yield f"[{sid}] Output:\n{output}"
-            last_yield = time.time()
+            return f"[{sid}] exited with code {code}:\n{output}"
+        return f"[{sid}] exited with code {code}"
 
-    # Final output
-    time.sleep(0.2)
-    final = session.read_new_output()
-    code = session.process.returncode
-    status = f"exited with code {code}" if code is not None else "exited"
-    if final:
-        yield f"[{sid}] Final ({status}):\n{final}"
-    else:
-        yield f"[{sid}] {status}"
+    # Command still running — return status so model can check later
+    if initial:
+        return f"[{sid}] running (PID {session.pid}):\n{initial}\n\nCall again with session_id=\"{sid}\" to check output."
+    return f"[{sid}] running (PID {session.pid})\n\nCall again with session_id=\"{sid}\" to check output."
 
 
 SHELL_TOOL = Tool(
     name="shell",
-    description="Run shell commands with streaming output. Supports interactive sessions — send input to running commands.",
+    description="Run shell commands interactively. Start command -> returns session_id. Call again with session_id to check output or send input. Never blocks.",
     parameters={
         "type": "object",
         "properties": {
             "command": {
                 "type": "string",
-                "description": "The shell command to execute",
+                "description": "The shell command to execute (omit when checking output or sending input)",
             },
             "session_id": {
                 "type": "string",
-                "description": "Session ID to send input to or get output from (omit to start new command)",
+                "description": "Session ID to check output or send input to (omit to start new command)",
             },
             "input_text": {
                 "type": "string",
                 "description": "Text to send to running session's stdin",
             },
-            "timeout": {
-                "type": "number",
-                "description": "Seconds between output updates (default 15)",
-            },
         },
         "required": ["command"],
     },
     handler=_shell_handler,
-    streamable=True,
+    streamable=False,
 )

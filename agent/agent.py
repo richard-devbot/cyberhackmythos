@@ -33,7 +33,7 @@ class Agent:
         base_url: str,
         api_key: str,
         model: str,
-        max_iterations: int = 15,
+        max_iterations: int = 150,
         system_prompt: str | None = None,
     ) -> None:
         self.client = OpenAI(base_url=base_url, api_key=api_key)
