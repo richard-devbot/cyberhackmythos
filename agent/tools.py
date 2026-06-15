@@ -1,6 +1,6 @@
 from markitdown import MarkItDown
 from typing import Any, Callable
-
+import requests
 
 class Tool:
     """A callable tool the agent can invoke."""
@@ -29,8 +29,14 @@ class Tool:
 
 def fetch_webpage(url: str) -> str:
     """Fetch a webpage and return its text content."""
-    md = MarkItDown()
-    return md.convert(url).text_content
+    try:
+        jina_ai_url = "https://r.jina.ai/"
+        response = requests.get(jina_ai_url + url)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        md = MarkItDown()
+        return md.convert(url).text_content
 
 FETCH_WEBPAGE_TOOL = Tool(
     name="fetch_webpage",

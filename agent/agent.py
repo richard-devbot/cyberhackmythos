@@ -33,12 +33,14 @@ class Agent:
         api_key: str,
         model: str,
         max_iterations: int = 15,
+        system_prompt: str | None = None,
     ) -> None:
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
         self._tools: list[Tool] = []
         self._final_tool_name: str | None = None
         self._max_iterations = max_iterations
+        self.system_prompt = system_prompt
 
     # ------------------------------------------------------------------
     # Tool registration
@@ -86,6 +88,12 @@ class Agent:
         """
         iteration = 0
 
+        # Inject system prompt once at the front if set
+        if self.system_prompt and (
+            not messages or messages[0].get("role") != "system"
+        ):
+            messages.insert(0, {"role": "system", "content": self.system_prompt})
+
         while True:
             iteration += 1
             if iteration > self._max_iterations:
@@ -123,10 +131,8 @@ class Agent:
                     continue
                 delta = choices[0].get("delta", {})
 
-                # Reasoning (e.g. DeepSeek R1)
                 reasoning = delta.get("reasoning_content") or delta.get("reasoning")
                 if reasoning:
-                    print(reasoning, flush=True, end="")
                     yield {"type": "reasoning", "content": reasoning}
 
                 # Text content

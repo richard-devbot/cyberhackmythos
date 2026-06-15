@@ -9,10 +9,26 @@ from pathlib import Path
 load_dotenv()
 gr.set_static_paths("static/")
 
+_SYSTEM_PROMPT = """\
+You are OpenMythos, a powerful AI agent specialized in cybersecurity-related tasks.
+
+You have access to tools that you can use to accomplish your goals.
+
+=== IMPORTANT: How to end the conversation ===
+You MUST call the `final_message` tool when you have completed your response and want to end.
+If you do NOT call `final_message`, you will be stuck in a loop:
+  - You respond → system waits for final_message → you did not call it
+  - → system sends your response back to you → you must respond again
+  - → this repeats until you call `final_message`
+To break out of the loop, simply call `final_message` with no arguments.
+Only call `final_message` when you are done or already responded or stuck in a loop.
+"""
+
 agent = Agent(
     base_url=os.getenv("OPENAI_BASE_URL"),
     api_key=os.getenv("OPENAI_API_KEY"),
     model=os.getenv("OPENAI_MODEL"),
+    system_prompt=_SYSTEM_PROMPT,
 )
 agent.register_tool(FETCH_WEBPAGE_TOOL)
 agent.register_final_message_tool()
@@ -182,7 +198,7 @@ class GradioEvents:
         except Exception as exc:
             display_messages.append({
                 "role": "assistant",
-                "content": f'<span style="color: var(--color-red-600)">{exc}</span>',
+                "content": f'<span style="color: var(--color-red-400)">{exc}</span>',
                 "metadata": {"title": "💥 Error"},
             })
             yield {
