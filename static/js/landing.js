@@ -75,7 +75,7 @@
     function setVH() {
         document.documentElement.style.setProperty(
             '--vh',
-            `${window.innerHeight * 0.01}px`
+            `${window.innerHeight}px`
         );
     }
 

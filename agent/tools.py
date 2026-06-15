@@ -179,21 +179,23 @@ from .shell import get_shell_manager
 
 
 def _shell_handler(
-    command: str,
+    command: str = "",
     session_id: str = "",
     input_text: str = "",
 ) -> str:
-    """Run shell commands interactively.
+    """Run shell commands interactively with persistent sessions.
 
-    command (required): The shell command to execute (omit when checking output or sending input)
+    command: The shell command to execute (omit when checking output or sending input)
     session_id: Session ID to check output or send input to (omit to start new command)
     input_text: Text to send to running session's stdin
 
     How it works:
-    - Start new command: returns session_id immediately (non-blocking)
-    - Check output: call with session_id to get current output
-    - Send input: call with session_id + input_text
-    - Command runs in background, never blocks the agent
+    - Start new command: provide command, returns session_id immediately (non-blocking)
+    - Check output: provide session_id only, returns current output
+    - Send input: provide session_id + input_text
+    - Sessions auto-destroy after 15 min idle
+    - Each session runs in its own temp folder (also cleaned up on timeout)
+    - Environment variables persist across calls in the same session
     """
     manager = get_shell_manager()
 
@@ -203,7 +205,7 @@ def _shell_handler(
     if existing_session and input_text:
         sent = manager.send_input(session_id, input_text)
         if not sent:
-            return f"Error: Session '{session_id}' closed"
+            return f"Error: Session '{session_id}' closed or not found"
         time.sleep(0.3)
         output = manager.poll_output(session_id)
         running = manager.is_running(session_id)
@@ -221,6 +223,12 @@ def _shell_handler(
         if output:
             return f"[{session_id}] {status}:\n{output}"
         return f"[{session_id}] {status}"
+
+    # Need a command to start a new session
+    if not command.strip():
+        if session_id:
+            return f"Error: Session '{session_id}' not found or expired"
+        return "Error: Provide a command to start a new session, or a session_id to check status"
 
     # Start new command
     sid = session_id or str(_uuid.uuid4())[:8]
@@ -248,24 +256,24 @@ def _shell_handler(
 
 SHELL_TOOL = Tool(
     name="shell",
-    description="Run shell commands interactively. Start command -> returns session_id. Call again with session_id to check output or send input. Never blocks.",
+    description="Run shell commands with persistent sessions. Start command -> get session_id. Call with session_id to check output or send input. Sessions auto-destroy after 15 min idle. Each session has its own temp folder.",
     parameters={
         "type": "object",
         "properties": {
             "command": {
                 "type": "string",
-                "description": "The shell command to execute (omit when checking output or sending input)",
+                "description": "Shell command to execute (omit when checking output or sending input)",
             },
             "session_id": {
                 "type": "string",
-                "description": "Session ID to check output or send input to (omit to start new command)",
+                "description": "Session ID to check output or send input (omit to start new command)",
             },
             "input_text": {
                 "type": "string",
                 "description": "Text to send to running session's stdin",
             },
         },
-        "required": ["command"],
+        "required": [],
     },
     handler=_shell_handler,
     streamable=False,

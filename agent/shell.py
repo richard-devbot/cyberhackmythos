@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
+import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import IO
+
+IDLE_TIMEOUT_SECONDS = 15 * 60  # 15 minutes
 
 
 @dataclass
@@ -15,9 +20,11 @@ class ShellSession:
 
     session_id: str
     process: subprocess.Popen[str]
+    temp_dir: Path
     output_buffer: list[str] = field(default_factory=list)
     last_read_pos: int = 0
     started_at: float = field(default_factory=time.time)
+    last_used_at: float = field(default_factory=time.time)
     closed: bool = False
 
     @property
@@ -28,22 +35,32 @@ class ShellSession:
     def returncode(self) -> int | None:
         return self.process.returncode
 
+    def touch(self) -> None:
+        """Update last_used_at to current time."""
+        self.last_used_at = time.time()
+
     def read_new_output(self) -> str:
         """Read new output since last read."""
+        self.touch()
         new_lines = self.output_buffer[self.last_read_pos :]
         self.last_read_pos = len(self.output_buffer)
         return "".join(new_lines)
 
     def get_full_output(self) -> str:
         """Get all output."""
+        self.touch()
         return "".join(self.output_buffer)
 
     def is_running(self) -> bool:
         """Check if process is still running."""
         return self.process.poll() is None
 
+    def is_idle_expired(self) -> bool:
+        """Check if session has been idle longer than IDLE_TIMEOUT_SECONDS."""
+        return (time.time() - self.last_used_at) > IDLE_TIMEOUT_SECONDS
+
     def close(self) -> None:
-        """Close the session."""
+        """Close the session and clean up temp directory."""
         if not self.closed:
             self.closed = True
             try:
@@ -54,6 +71,14 @@ class ShellSession:
                     self.process.kill()
                 except Exception:
                     pass
+            # Clean up temp directory (retry a few times for Windows file locks)
+            if self.temp_dir.exists():
+                for _ in range(3):
+                    try:
+                        shutil.rmtree(self.temp_dir, ignore_errors=False)
+                        break
+                    except Exception:
+                        time.sleep(0.1)
 
 
 class ShellManager:
@@ -63,6 +88,29 @@ class ShellManager:
         self.sessions: dict[str, ShellSession] = {}
         self._lock = threading.Lock()
         self.default_timeout = default_timeout
+        self._cleanup_thread = threading.Thread(
+            target=self._cleanup_loop, daemon=True
+        )
+        self._cleanup_thread.start()
+
+    def _cleanup_loop(self) -> None:
+        """Background thread that cleans up idle sessions every 60 seconds."""
+        while True:
+            time.sleep(60)
+            self._cleanup_idle_sessions()
+
+    def _cleanup_idle_sessions(self) -> None:
+        """Close sessions that have been idle for more than IDLE_TIMEOUT_SECONDS."""
+        with self._lock:
+            idle_sessions = [
+                sid
+                for sid, session in self.sessions.items()
+                if session.is_idle_expired()
+            ]
+            for sid in idle_sessions:
+                session = self.sessions.pop(sid, None)
+                if session:
+                    session.close()
 
     def start(
         self,
@@ -71,11 +119,20 @@ class ShellManager:
         cwd: str | None = None,
         env: dict[str, str] | None = None,
     ) -> ShellSession:
-        """Start a new shell session."""
+        """Start a new shell session in a fresh temp directory."""
         with self._lock:
             # Close existing session with same ID
             if session_id in self.sessions:
                 self.sessions[session_id].close()
+
+            # Create a unique temp directory for this session
+            temp_dir = Path(tempfile.mkdtemp(prefix=f"shell_{session_id}_"))
+
+            # Merge env with inherited environment
+            import os
+            process_env = os.environ.copy()
+            if env:
+                process_env.update(env)
 
             # Use shell=True for interactive commands
             process = subprocess.Popen(
@@ -86,11 +143,15 @@ class ShellManager:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                cwd=cwd,
-                env=env,
+                cwd=str(temp_dir),
+                env=process_env,
             )
 
-            session = ShellSession(session_id=session_id, process=process)
+            session = ShellSession(
+                session_id=session_id,
+                process=process,
+                temp_dir=temp_dir,
+            )
             self.sessions[session_id] = session
 
             # Start output reader thread
@@ -125,6 +186,7 @@ class ShellManager:
             try:
                 session.process.stdin.write(input_text + "\n")
                 session.process.stdin.flush()
+                session.touch()
                 return True
             except Exception:
                 return False
