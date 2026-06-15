@@ -80,5 +80,5 @@
     }
 
     setVH();
-    window.addEventListener('resize', setVH);
+    // window.addEventListener('resize', setVH);
 }
