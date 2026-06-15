@@ -10,13 +10,23 @@ app_file: app.py
 pinned: true
 short_description: An Open Source Cyber Security Agent
 license: apache-2.0
+tags:
+  - gradio
+  - build-small-hackathon
+  - backyard-ai
+  - track:backyard
+  - sponsor:modal
+  - achievement:offbrand
+  - achievement:welltuned
+  - achievement:fieldnotes
+  - achievement:offgrid
 ---
 
 # OpenMythos 🌌
 
-**Paste your codebase. Our AI security agent audits the repository** — a multi-level vulnerability analysis, a visual dependency risk path, a declared threat level then generates an instant, verifiable hotfix patch before threat actors can exploit it.
+**Paste your codebase. Our AI security agent audits the repository** a multi-level vulnerability analysis, a visual dependency risk path, a declared threat level then generates an instant, verifiable hotfix patch before threat actors can exploit it.
 
-Built during the **Hugging Face Small Gradio Hackathon**, OpenMythos democratizes cutting-edge security auditing. It bridges an immersive retro terminal interface with the elite agentic reasoning and long-context preservation architecture of a fine-tuned dense model.
+Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes cutting-edge security auditing. It bridges an immersive retro terminal interface with the elite agentic reasoning and long-context preservation architecture of a fine-tuned dense model.
 
 > ⚠️ **Proactive Defense.** This platform is engineered for defensive security intelligence. It aims to discover flaws, memory leaks, security configurations, and input bugs instantly, empowering software engineering teams to deploy hotfixes long before a threat vector is weaponized.
 
@@ -27,6 +37,26 @@ Built during the **Hugging Face Small Gradio Hackathon**, OpenMythos democratize
 - **Demo Video:** TODO
 - **Social Post:** TODO
 - **Blog Post:** TODO
+
+---
+
+## 🏕️ Hackathon Categories
+
+| Category | Why OpenMythos Qualifies |
+|:---------|:-------------------------|
+| **Main Track: Backyard AI** | Solves a real, specific problem for real people: software teams need instant security auditing. The person is every developer who ships code and wants to catch vulnerabilities before attackers do. |
+| **🔌 Off the Grid** | **100% Local & Privacy-First.** The entire pipeline runs with zero cloud API dependencies just a local model endpoint. Your code never leaves your machine. |
+| **🎯 Well-Tuned** | Built on a **Qwen3.6-27B** base fine-tuned via SFT on cybersecurity dataset. The fine-tuned model: https://huggingface.co/build-small-hackathon/OpenMythos |
+| **🎨 Off-Brand** | Fully custom terminal-inspired UI all pushing far past the default Gradio look. |
+
+### Bonus Quests
+
+| Badge | Status | Notes |
+|:------|:-------|:------|
+| 🔌 Off the Grid | ✅ **Earned** | Local-first by design |
+| 🎯 Well-Tuned | ✅ **Earned** | SFT on cybersecurity data; model to be published |
+| 🎨 Off-Brand | ✅ **Earned** | Custom CSS, SVG, terminal theme |
+| 📓 Field Notes | 🚧 Planned | Blog post:  |
 
 ---
 
