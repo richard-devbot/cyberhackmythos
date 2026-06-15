@@ -14,7 +14,7 @@ from .mcp import MCPClient, load_mcp_tools, load_all_mcp_tools
 #   {"type": "text",     "content": "partial text"}
 #   {"type": "reasoning","content": "model thinking"}
 #   {"type": "tool_call", "name": str, "arguments": '{"url":"..."}'}
-#   {"type": "tool_output","name": str, "content": "result"}
+#   {"type": "tool_output","name": str, "arguments": str, "content": "result", "partial": bool}
 #   {"type": "done",     "content": "full assistant response"}
 #   {"type": "error",    "content": "error message"}
 # ---------------------------------------------------------------------------
@@ -42,6 +42,7 @@ class Agent:
         self._final_tool_name: str | None = None
         self._max_iterations = max_iterations
         self.system_prompt = system_prompt
+        self._tool_results: dict[str, str] = {}  # tool_call_id → full result
 
     # ------------------------------------------------------------------
     # Tool registration
@@ -49,6 +50,58 @@ class Agent:
 
     def register_tool(self, tool: Tool) -> None:
         self._tools.append(tool)
+
+    def register_read_tool(self) -> None:
+        """Register a tool to read truncated tool responses by line range."""
+        results_cache = self._tool_results
+
+        def _read(tool_call_id: str, start_line: int, num_lines: int = 50) -> str:
+            """Read more lines from a truncated tool response.
+
+            tool_call_id (required): The tool_call_id from the truncated response
+            start_line (required): Line number to start reading from
+            num_lines: Number of lines to read (default 50)
+            """
+            full = results_cache.get(tool_call_id)
+            if full is None:
+                return f"Error: No result found for tool_call_id '{tool_call_id}'"
+            lines = full.split("\n")
+            total = len(lines)
+            if start_line >= total:
+                return f"Error: start_line {start_line} >= total lines {total}"
+            end = min(start_line + num_lines, total)
+            chunk = "\n".join(lines[start_line:end])
+            remaining = total - end
+            header = f"Lines {start_line}-{end} of {total}"
+            if remaining > 0:
+                header += f" ({remaining} lines remaining)"
+            return f"{header}\n\n{chunk}"
+
+        self._tools.append(
+            Tool(
+                name="read_tool_response",
+                description="Read more lines from a truncated tool response. Use when a previous tool output was truncated.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "tool_call_id": {
+                            "type": "string",
+                            "description": "The tool_call_id from the truncated response",
+                        },
+                        "start_line": {
+                            "type": "integer",
+                            "description": "Line number to start reading from (0-indexed)",
+                        },
+                        "num_lines": {
+                            "type": "integer",
+                            "description": "Number of lines to read (default 50)",
+                        },
+                    },
+                    "required": ["tool_call_id", "start_line"],
+                },
+                handler=_read,
+            )
+        )
 
     def register_mcp(self, url: str, headers: dict[str, str] | None = None) -> list[Tool]:
         """Connect to an MCP server and register all its tools.
@@ -239,30 +292,108 @@ class Agent:
                     tool_obj = next(
                         (t for t in self._tools if t.name == tname), None
                     )
-                    if tool_obj:
-                        try:
-                            result = tool_obj.run(**targs)
-                        except Exception as e:
-                            result = f"Error executing {tname}: {e}"
-                    else:
-                        result = f"Error: Tool '{tname}' not found"
 
-                    result_str = str(result)
-                    if len(result_str) > 5_000:
-                        result_str = result_str[:5_000] + "\n...[truncated]"
-                    yield {
-                        "type": "tool_output",
-                        "name": tname,
-                        "content": result_str,
-                    }
-
-                    messages.append(
-                        {
+                    if tool_obj is None:
+                        result_str = f"Error: Tool '{tname}' not found"
+                        self._tool_results[tc_spec["id"]] = result_str
+                        yield {
+                            "type": "tool_output",
+                            "name": tname,
+                            "arguments": tc_spec["function"]["arguments"],
+                            "content": result_str,
+                        }
+                        messages.append({
                             "role": "tool",
                             "tool_call_id": tc_spec["id"],
                             "content": result_str,
+                        })
+                        continue
+
+                    # Streamable tool — yield partial results
+                    if tool_obj.streamable:
+                        accumulated = ""
+                        last_chunk = ""
+                        try:
+                            for chunk in tool_obj.stream(**targs):
+                                accumulated += chunk
+                                last_chunk = chunk
+                                # Truncate display but keep full for read_tool_response
+                                display = accumulated
+                                if len(display) > 5_000:
+                                    lines = display.split("\n")
+                                    char_count = 0
+                                    cut_line = 0
+                                    for i, line in enumerate(lines):
+                                        char_count += len(line) + 1
+                                        if char_count > 5_000:
+                                            cut_line = i
+                                            break
+                                    display = "\n".join(lines[:cut_line])
+                                yield {
+                                    "type": "tool_output",
+                                    "name": tname,
+                                    "arguments": tc_spec["function"]["arguments"],
+                                    "content": display,
+                                    "partial": True,
+                                }
+                            # Mark final yield as non-partial
+                            display = accumulated
+                            if len(display) > 5_000:
+                                lines = display.split("\n")
+                                char_count = 0
+                                cut_line = 0
+                                for i, line in enumerate(lines):
+                                    char_count += len(line) + 1
+                                    if char_count > 5_000:
+                                        cut_line = i
+                                        break
+                                display = "\n".join(lines[:cut_line])
+                            yield {
+                                "type": "tool_output",
+                                "name": tname,
+                                "arguments": tc_spec["function"]["arguments"],
+                                "content": display,
+                                "partial": False,
+                            }
+                            result_str = accumulated
+                        except Exception as e:
+                            result_str = f"Error executing {tname}: {e}"
+                    else:
+                        # Regular tool — single result
+                        try:
+                            result_str = str(tool_obj.run(**targs))
+                        except Exception as e:
+                            result_str = f"Error executing {tname}: {e}"
+
+                    # Store full result and truncate for message history
+                    self._tool_results[tc_spec["id"]] = result_str
+                    lines = result_str.split("\n")
+                    if len(result_str) > 5_000:
+                        char_count = 0
+                        cut_line = 0
+                        for i, line in enumerate(lines):
+                            char_count += len(line) + 1
+                            if char_count > 5_000:
+                                cut_line = i
+                                break
+                        truncated = "\n".join(lines[:cut_line])
+                        remaining = len(lines) - cut_line
+                        result_str = f"{truncated}\n\n...[{remaining} lines truncated — use read_tool_response tool_call_id=\"{tc_spec['id']}\" start_line={cut_line} to read more]"
+
+                    # Final tool_output (non-partial) for history
+                    if not tool_obj.streamable:
+                        yield {
+                            "type": "tool_output",
+                            "name": tname,
+                            "arguments": tc_spec["function"]["arguments"],
+                            "content": result_str,
                         }
-                    )
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc_spec["id"],
+                        "content": result_str,
+                    })
 
                 continue  # Loop back — model can call more tools or final_message
 

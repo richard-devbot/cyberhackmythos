@@ -2,7 +2,7 @@ import time
 import uuid
 import gradio as gr
 from dotenv import load_dotenv
-from agent import Agent, FETCH_WEBPAGE_TOOL
+from agent import Agent, FETCH_WEBPAGE_TOOL, SHELL_TOOL
 import os
 from pathlib import Path
 
@@ -31,7 +31,9 @@ agent = Agent(
     system_prompt=_SYSTEM_PROMPT,
 )
 agent.register_tool(FETCH_WEBPAGE_TOOL)
+agent.register_tool(SHELL_TOOL)
 agent.register_all_mcp()
+agent.register_read_tool()
 agent.register_final_message_tool()
 
 # Load JS from external files
@@ -156,13 +158,15 @@ class GradioEvents:
                         # Grab the tool name from the existing message
                         tool_name = display_messages[tool_call_idx]["metadata"]["title"].split("Used tool ")[-1]
                         display_messages[tool_call_idx]["content"] = (
-                            f"```\n{tool_name}(...)\n```\n\n"
+                            f"```\n{tool_name}({ev['arguments']})\n```\n\n"
                             f"**Output:**\n```\n{cc}\n```"
                         )
                         display_messages[tool_call_idx]["metadata"] = {
                             "title": f"🛠️ {tool_name} — {len(ev['content'])} chars",
                         }
-                        tool_call_idx = None
+                        # Only clear tool_call_idx if NOT partial (final output)
+                        if not ev.get("partial"):
+                            tool_call_idx = None
 
                 elif t == "error":
                     display_messages.append({
@@ -343,7 +347,8 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 elem_id="chatbot",
                 show_label=False,
                 buttons=[],
-                layout="bubble"
+                layout="bubble",
+                autoscroll=False
             )
             with gr.Row(elem_id="input-row"):
                 msg = gr.Textbox(
