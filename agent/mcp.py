@@ -234,6 +234,10 @@ MCP_SERVERS: dict[str, dict[str, Any]] = {
         "url": "https://mcp.grep.app",
         "description": "GitHub code search via grep.app",
     },
+    "github": {
+        "url": "https://gitmcp.io/docs",
+        "description": "GitHub code search and repository info",
+    },
 }
 
 

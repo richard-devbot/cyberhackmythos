@@ -278,3 +278,68 @@ SHELL_TOOL = Tool(
     handler=_shell_handler,
     streamable=False,
 )
+
+
+# Shared cache for read_tool_response - agent writes, tool reads
+_TOOL_RESULTS_CACHE: dict[str, str] = {}
+
+
+def _read_tool_handler(tool_call_id: str, start_line: int, num_lines: int = 50) -> str:
+    """Read more lines from a truncated tool response.
+
+    tool_call_id (required): The tool_call_id from the truncated response
+    start_line (required): Line number to start reading from
+    num_lines: Number of lines to read (default 50)
+    """
+    full = _TOOL_RESULTS_CACHE.get(tool_call_id)
+    if full is None:
+        return f"Error: No result found for tool_call_id '{tool_call_id}'"
+    lines = full.split("\n")
+    total = len(lines)
+    if start_line >= total:
+        return f"Error: start_line {start_line} >= total lines {total}"
+    end = min(start_line + num_lines, total)
+    chunk = "\n".join(lines[start_line:end])
+    remaining = total - end
+    header = f"Lines {start_line}-{end} of {total}"
+    if remaining > 0:
+        header += f" ({remaining} lines remaining)"
+    return f"{header}\n\n{chunk}"
+
+
+READ_TOOL = Tool(
+    name="read_tool_response",
+    description="Read more lines from a truncated tool response. Use when a previous tool output was truncated.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "tool_call_id": {
+                "type": "string",
+                "description": "The tool_call_id from the truncated response",
+            },
+            "start_line": {
+                "type": "integer",
+                "description": "Line number to start reading from (0-indexed)",
+            },
+            "num_lines": {
+                "type": "integer",
+                "description": "Number of lines to read (default 50)",
+            },
+        },
+        "required": ["tool_call_id", "start_line"],
+    },
+    handler=_read_tool_handler,
+)
+
+FINAL_MESSAGE_TOOL = Tool(
+    name="final_message",
+    description=(
+        "Signal that you have completed your response and want "
+        "to end the conversation. Call this ONLY when you are "
+        "truly done. Until you call this tool, the conversation "
+        "will continue. Means you will multiple times answer the"
+        "same question or can get stuck in loops if you never call it."
+    ),
+    parameters={"type": "object", "properties": {}, "required": []},
+    handler=lambda: "",
+)

@@ -2,7 +2,7 @@ import time
 import uuid
 import gradio as gr
 from dotenv import load_dotenv
-from agent import Agent, FETCH_WEBPAGE_TOOL, SHELL_TOOL
+from agent import Agent, FETCH_WEBPAGE_TOOL, SHELL_TOOL, READ_TOOL, FINAL_MESSAGE_TOOL
 import os
 from pathlib import Path
 
@@ -30,11 +30,9 @@ agent = Agent(
     model=os.getenv("OPENAI_MODEL"),
     system_prompt=_SYSTEM_PROMPT,
 )
-agent.register_tool(FETCH_WEBPAGE_TOOL)
-agent.register_tool(SHELL_TOOL)
+agent.register_tool(FETCH_WEBPAGE_TOOL, SHELL_TOOL, READ_TOOL, FINAL_MESSAGE_TOOL)
 agent.register_all_mcp()
-agent.register_read_tool()
-agent.register_final_message_tool()
+agent.set_final_message_tool()
 
 # Load JS from external files
 _js_dir = Path(__file__).parent / "static" / "js"

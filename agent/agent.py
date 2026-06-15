@@ -3,7 +3,7 @@ from typing import Any, Generator
 
 from openai import OpenAI
 
-from .tools import Tool
+from .tools import Tool, _TOOL_RESULTS_CACHE
 from .mcp import MCPClient, load_mcp_tools, load_all_mcp_tools
 
 # ---------------------------------------------------------------------------
@@ -42,66 +42,13 @@ class Agent:
         self._final_tool_name: str | None = None
         self._max_iterations = max_iterations
         self.system_prompt = system_prompt
-        self._tool_results: dict[str, str] = {}  # tool_call_id → full result
 
     # ------------------------------------------------------------------
     # Tool registration
     # ------------------------------------------------------------------
 
-    def register_tool(self, tool: Tool) -> None:
-        self._tools.append(tool)
-
-    def register_read_tool(self) -> None:
-        """Register a tool to read truncated tool responses by line range."""
-        results_cache = self._tool_results
-
-        def _read(tool_call_id: str, start_line: int, num_lines: int = 50) -> str:
-            """Read more lines from a truncated tool response.
-
-            tool_call_id (required): The tool_call_id from the truncated response
-            start_line (required): Line number to start reading from
-            num_lines: Number of lines to read (default 50)
-            """
-            full = results_cache.get(tool_call_id)
-            if full is None:
-                return f"Error: No result found for tool_call_id '{tool_call_id}'"
-            lines = full.split("\n")
-            total = len(lines)
-            if start_line >= total:
-                return f"Error: start_line {start_line} >= total lines {total}"
-            end = min(start_line + num_lines, total)
-            chunk = "\n".join(lines[start_line:end])
-            remaining = total - end
-            header = f"Lines {start_line}-{end} of {total}"
-            if remaining > 0:
-                header += f" ({remaining} lines remaining)"
-            return f"{header}\n\n{chunk}"
-
-        self._tools.append(
-            Tool(
-                name="read_tool_response",
-                description="Read more lines from a truncated tool response. Use when a previous tool output was truncated.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "tool_call_id": {
-                            "type": "string",
-                            "description": "The tool_call_id from the truncated response",
-                        },
-                        "start_line": {
-                            "type": "integer",
-                            "description": "Line number to start reading from (0-indexed)",
-                        },
-                        "num_lines": {
-                            "type": "integer",
-                            "description": "Number of lines to read (default 50)",
-                        },
-                    },
-                    "required": ["tool_call_id", "start_line"],
-                },
-                handler=_read,
-            )
-        )
+    def register_tool(self, *tools: Tool) -> None:
+        self._tools.extend(tools)
 
     def register_mcp(self, url: str, headers: dict[str, str] | None = None) -> list[Tool]:
         """Connect to an MCP server and register all its tools.
@@ -122,32 +69,9 @@ class Agent:
             self._tools.extend(server_tools)
         return all_tools
 
-    def register_final_message_tool(self) -> None:
-        """Register a no-input ``final_message`` tool the model **must** call
-        to signal that it is done.
-
-        Until the model calls this tool the agent keeps looping — plain
-        text responses or other tool calls will not end the conversation.
-
-        The tool call is handled internally: no ``tool_call`` /
-        ``tool_output`` events are yielded and the caller only sees a
-        ``done`` event.
-        """
-        self._final_tool_name = "final_message"
-        self._tools.append(
-            Tool(
-                name="final_message",
-                description=(
-                    "Signal that you have completed your response and want "
-                    "to end the conversation. Call this ONLY when you are "
-                    "truly done. Until you call this tool, the conversation "
-                    "will continue. Means you will multiple times answer the"
-                    "same question or can get stuck in loops if you never call it."
-                ),
-                parameters={"type": "object", "properties": {}, "required": []},
-                handler=lambda: "",
-            )
-        )
+    def set_final_message_tool(self, tool_name: str = "final_message") -> None:
+        """Set the name of the final message tool for internal handling."""
+        self._final_tool_name = tool_name
 
     # ------------------------------------------------------------------
     # Streaming loop
@@ -295,7 +219,7 @@ class Agent:
 
                     if tool_obj is None:
                         result_str = f"Error: Tool '{tname}' not found"
-                        self._tool_results[tc_spec["id"]] = result_str
+                        _TOOL_RESULTS_CACHE[tc_spec["id"]] = result_str
                         yield {
                             "type": "tool_output",
                             "name": tname,
@@ -366,7 +290,7 @@ class Agent:
                             result_str = f"Error executing {tname}: {e}"
 
                     # Store full result and truncate for message history
-                    self._tool_results[tc_spec["id"]] = result_str
+                    _TOOL_RESULTS_CACHE[tc_spec["id"]] = result_str
                     lines = result_str.split("\n")
                     if len(result_str) > 5_000:
                         char_count = 0
