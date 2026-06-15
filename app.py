@@ -328,7 +328,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
 
         with gr.Column(elem_id="chat-column"):
 
-            # Landing page shown when chat is empty
+            # Landing page shown when chat is empty with added hyperlinks
             landing_page = gr.HTML(
                 value="""
                 <div id="landing-page">
@@ -338,7 +338,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                         </div>
                     </div>
                     <div class="landing-prompt">
-                        <p>Made with ❤️ by KingNish and Himanshu</p>
+                        <p>Made with ❤️ by <a href="http://huggingface.co/KingNish" target="_blank" style="color: var(--primary-500, #ff4b4b); text-decoration: underline;">KingNish</a> and <a href="https://huggingface.co/himanshu17HF" target="_blank" style="color: var(--primary-500, #ff4b4b); text-decoration: underline;">Himanshu</a></p>
                     </div>
                 </div>
                 """,
