@@ -31,6 +31,7 @@ agent = Agent(
     system_prompt=_SYSTEM_PROMPT,
 )
 agent.register_tool(FETCH_WEBPAGE_TOOL)
+agent.register_all_mcp()
 agent.register_final_message_tool()
 
 # Load JS from external files

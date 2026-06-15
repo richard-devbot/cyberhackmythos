@@ -4,6 +4,7 @@ from typing import Any, Generator
 from openai import OpenAI
 
 from .tools import Tool
+from .mcp import MCPClient, load_mcp_tools, load_all_mcp_tools
 
 # ---------------------------------------------------------------------------
 # Streaming event contract
@@ -48,6 +49,25 @@ class Agent:
 
     def register_tool(self, tool: Tool) -> None:
         self._tools.append(tool)
+
+    def register_mcp(self, url: str, headers: dict[str, str] | None = None) -> list[Tool]:
+        """Connect to an MCP server and register all its tools.
+
+        Returns the list of registered Tool instances.
+        """
+        tools = load_mcp_tools(url=url, headers=headers)
+        self._tools.extend(tools)
+        return tools
+
+    def register_all_mcp(self) -> dict[str, list[Tool]]:
+        """Load tools from all pre-configured MCP servers.
+
+        Returns ``{server_name: [Tool, ...]}`` and registers them.
+        """
+        all_tools = load_all_mcp_tools()
+        for server_tools in all_tools.values():
+            self._tools.extend(server_tools)
+        return all_tools
 
     def register_final_message_tool(self) -> None:
         """Register a no-input ``final_message`` tool the model **must** call
