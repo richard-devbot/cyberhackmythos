@@ -36,7 +36,7 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 
 - **Demo Video:** TODO
 - **Social Post:** TODO
-- **Blog Post:** TODO
+- **Blog Post:** https://huggingface.co/blog/KingNish/openmythos
 
 ---
 
@@ -56,15 +56,11 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 | 🔌 Off the Grid | ✅ **Earned** | Local-first by design |
 | 🎯 Well-Tuned | ✅ **Earned** | SFT on cybersecurity data; model to be published |
 | 🎨 Off-Brand | ✅ **Earned** | Custom CSS, SVG, terminal theme |
-| 📓 Field Notes | 🚧 Planned | Blog post:  |
-
----
+| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/openmythos |
 
 ## Why it's worth a look
 
 - 🔌 **100% Local & Privacy-First.** Designed as a fully open-source alternative to proprietary security intelligence layers (like Claude's Mythos model). It can be run entirely locally, requiring zero internet connectivity or external dependencies to operate.
-
----
 
 ## How it works
 
@@ -76,8 +72,6 @@ A multi-stage engineering pipeline built around aggregated, industry-standard se
 | **2** | **Initial Fine-Tuning (SFT)** | Supervised Fine-Tuning on cybersecurity tasks. Qwen3.6-27B Base (Up to 32K+ token context window). |
 
 The entire pipeline leverages highly specialized weights to ensure an elite vulnerability discovery rate. No massive API dependencies anywhere: a clever chain of targeted engineering delivers the whole security suite.
-
----
 
 ## 🤝 Project Contributors
 
