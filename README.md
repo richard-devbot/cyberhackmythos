@@ -34,9 +34,9 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 
 ## ▶️ See it in action
 
-- **Demo Video:** TODO
-- **Social Post:** TODO
-- **Blog Post:** https://huggingface.co/blog/KingNish/openmythos
+- **Demo Video:** https://www.youtube.com/watch?v=EQyHawWfyZ0
+- **Social Post:** [X](https://x.com/kingnish24/status/2066602499356889493) [Linkedin](https://www.linkedin.com/feed/update/urn:li:activity:7472370083663765504) [Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1u6qw5b/we_trained_a_cybersecurityfocused_mythos_like_llm/)
+- **Blog Post:** https://huggingface.co/blog/KingNish/OpenMythos
 
 ---
 
@@ -56,7 +56,7 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 | 🔌 Off the Grid | ✅ **Earned** | Local-first by design |
 | 🎯 Well-Tuned | ✅ **Earned** | SFT on cybersecurity data; model to be published |
 | 🎨 Off-Brand | ✅ **Earned** | Custom CSS, SVG, terminal theme |
-| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/openmythos |
+| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/OpenMythos |
 
 ## Why it's worth a look
 
@@ -79,3 +79,5 @@ Developed with ❤️ during the **Hugging Face Small Gradio Hackathon** by:
 
 - **KingNish** – [HuggingFace Profile](https://huggingface.co/KingNish)
 - **Himanshu** – [HuggingFace Profile](https://huggingface.co/himanshu17HF)
+
+*Built for the Build Small Hackathon. Model: [OpenMythos](https://huggingface.co/build-small-hackathon/OpenMythos) · Dataset: [CVE Vulnerabilities Detailed](https://huggingface.co/datasets/build-small-hackathon/CVE_Vulnerailities_Detailed) · [ArXiv cs.CR Filtered](https://huggingface.co/datasets/himanshu17HF/ArvixImport-Filtered-Final) · Space: [OpenMythos](https://huggingface.co/spaces/build-small-hackathon/OpenMythos)*

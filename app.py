@@ -308,7 +308,7 @@ class GradioEvents:
             "conversation_contexts": state_value.get("conversation_contexts", {}),
         })
 
-with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
+with gr.Blocks(fill_width=True, title="OpenMythos Demo") as demo:
     state = gr.State({
         "conversation_contexts": {},
         "conversations": [],
@@ -360,7 +360,7 @@ with gr.Blocks(fill_width=True, title="Demo Chat") as demo:
                 show_label=False,
                 buttons=[],
                 layout="bubble",
-                autoscroll=False
+                autoscroll=True
             )
             with gr.Row(elem_id="input-row"):
                 msg = gr.Textbox(
