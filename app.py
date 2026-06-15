@@ -185,12 +185,15 @@ class GradioEvents:
                 elif t == "done":
                     break
 
+                # Update history in real-time so state always has latest messages
+                ctx["history"] = display_messages
+
                 yield {
                     chatbot: gr.update(value=display_messages),
                     state: gr.update(value=state_value),
                 }
 
-            # Sync history with display format so saves remember tool call bubbles
+            # Final sync (ensures tool output messages are saved)
             ctx["history"] = display_messages
 
             yield {
@@ -206,6 +209,7 @@ class GradioEvents:
                 "content": f'<span style="color: var(--color-red-400)">{exc}</span>',
                 "metadata": {"title": "💥 Error"},
             })
+            ctx["history"] = display_messages
             yield {
                 chatbot: gr.update(value=display_messages),
                 state: gr.update(value=state_value),
