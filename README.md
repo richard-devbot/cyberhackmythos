@@ -36,7 +36,7 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 
 - **Demo Video:** https://www.youtube.com/watch?v=EQyHawWfyZ0
 - **Social Post:** [X](https://x.com/kingnish24/status/2066602499356889493) [Linkedin](https://www.linkedin.com/feed/update/urn:li:activity:7472370083663765504) [Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1u6qw5b/we_trained_a_cybersecurityfocused_mythos_like_llm/)
-- **Blog Post:** https://huggingface.co/blog/KingNish/OpenMythos
+- **Blog Post:** https://huggingface.co/blog/KingNish/openmythos
 
 ---
 
@@ -56,7 +56,7 @@ Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes
 | 🔌 Off the Grid | ✅ **Earned** | Local-first by design |
 | 🎯 Well-Tuned | ✅ **Earned** | SFT on cybersecurity data; model to be published |
 | 🎨 Off-Brand | ✅ **Earned** | Custom CSS, SVG, terminal theme |
-| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/OpenMythos |
+| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/openmythos |
 
 ## Why it's worth a look
 
