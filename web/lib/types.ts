@@ -28,10 +28,3 @@ export interface Finding {
   priority?: Priority | null;
   remediation?: string | null;
 }
-
-export interface ScanMeta {
-  target: string;
-  scanners: string[];
-  isolation: string;
-  scannedAt: string;
-}

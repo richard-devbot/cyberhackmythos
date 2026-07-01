@@ -9,7 +9,6 @@ import { RiskHotspots } from "@/components/dashboard/risk-hotspots";
 import { FindingsTable } from "@/components/dashboard/findings-table";
 import { Button } from "@/components/ui/button";
 import { getFindings } from "@/lib/api";
-import { MOCK_FINDINGS } from "@/lib/mock";
 import type { Finding } from "@/lib/types";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -36,11 +35,11 @@ export default function DashboardPage() {
     load();
   }, [load]);
 
-  const live = findings ?? [];
-  const shown = offline ? MOCK_FINDINGS : live;
+  // Always render real data — never fabricated findings. Offline/empty get honest states.
+  const shown = findings ?? [];
   const banner = offline
-    ? "Engine offline — showing demo data. Start the API (python api.py) to see live findings."
-    : !loading && live.length === 0
+    ? "Engine offline — start the API (python api.py) to load live findings."
+    : !loading && shown.length === 0
       ? "No findings yet — run a scan from the Console, then refresh."
       : null;
 
