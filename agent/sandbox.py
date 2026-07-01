@@ -1,4 +1,4 @@
-"""Command execution isolation for OpenMythos.
+"""Command execution isolation for cyberhackmythos.
 
 The agent runs commands on behalf of an LLM that is analyzing *untrusted* code.
 Those commands must not be able to (a) read secrets, (b) exfiltrate data over the

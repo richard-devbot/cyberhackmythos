@@ -1,4 +1,4 @@
-"""Central, env-driven configuration for OpenMythos security controls.
+"""Central, env-driven configuration for cyberhackmythos security controls.
 
 Every knob here has a safe default. Operators override via environment variables
 (prefixed ``OPENMYTHOS_``) so nothing security-relevant is hard-coded in source.

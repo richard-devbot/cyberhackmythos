@@ -25,7 +25,7 @@ DOS = "Denial of Service"
 ELEVATION = "Elevation of Privilege"
 STRIDE_ORDER = [SPOOFING, TAMPERING, REPUDIATION, INFO_DISCLOSURE, DOS, ELEVATION]
 
-# CWE -> STRIDE. Curated from the common weakness set OpenMythos will encounter.
+# CWE -> STRIDE. Curated from the common weakness set cyberhackmythos will encounter.
 _STRIDE_BY_CWE: dict[str, str] = {
     "CWE-287": SPOOFING, "CWE-290": SPOOFING, "CWE-384": SPOOFING, "CWE-346": SPOOFING,
     "CWE-89": TAMPERING, "CWE-78": TAMPERING, "CWE-79": TAMPERING, "CWE-94": TAMPERING,

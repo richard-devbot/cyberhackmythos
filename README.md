@@ -1,83 +1,118 @@
 ---
-title: OpenMythos
+title: cyberhackmythos
 emoji: 🛡️
 colorFrom: gray
 colorTo: indigo
 sdk: gradio
-sdk_version: 6.18.0
+sdk_version: 6.19.0
 python_version: '3.13'
 app_file: app.py
 pinned: true
-short_description: An Open Source Cyber Security Agent
+short_description: An AI security agent that audits code with real scanners, prioritizes with live threat intel, and verifies its own patches.
 license: apache-2.0
-tags:
-  - gradio
-  - build-small-hackathon
-  - backyard-ai
-  - track:backyard
-  - sponsor:modal
-  - achievement:offbrand
-  - achievement:welltuned
-  - achievement:fieldnotes
-  - achievement:offgrid
 ---
 
-# OpenMythos 🌌
+# cyberhackmythos 🛡️
 
-**Paste your codebase. Our AI security agent audits the repository** a multi-level vulnerability analysis, a visual dependency risk path, a declared threat level then generates an instant, verifiable hotfix patch before threat actors can exploit it.
+**Paste a codebase. cyberhackmythos audits it with real security scanners, enriches every
+finding with live threat intelligence, ranks what to fix first, and proves its patches
+actually work — before it ever calls something "fixed."**
 
-Built during the **Hugging Face Small Gradio Hackathon** OpenMythos democratizes cutting-edge security auditing. It bridges an immersive retro terminal interface with the elite agentic reasoning and long-context preservation architecture of a fine-tuned dense model.
+It runs an LLM agent (NVIDIA NIM / `glm-5.1`) inside a locked-down sandbox and gives it
+a toolbox of industry-standard scanners plus a threat-intel layer. The result is
+**evidence, not guesses**: each finding is backed by a real tool, a CWE/CVE, and a
+defensible priority — and each hotfix is verified by re-scanning before it's shown to you.
 
-> ⚠️ **Proactive Defense.** This platform is engineered for defensive security intelligence. It aims to discover flaws, memory leaks, security configurations, and input bugs instantly, empowering software engineering teams to deploy hotfixes long before a threat vector is weaponized.
+> ⚠️ **Defensive security.** cyberhackmythos is built to *find and fix* flaws in your own
+> code — SAST issues, hardcoded secrets, vulnerable dependencies, IaC/container
+> misconfigurations — so you can ship fixes before they're exploited.
 
 ---
 
-## ▶️ See it in action
+## What makes it different
 
-- **Demo Video:** https://www.youtube.com/watch?v=EQyHawWfyZ0
-- **Social Post:** [X](https://x.com/kingnish24/status/2066602499356889493) [Linkedin](https://www.linkedin.com/feed/update/urn:li:activity:7472370083663765504) [Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1u6qw5b/we_trained_a_cybersecurityfocused_mythos_like_llm/)
-- **Blog Post:** https://huggingface.co/blog/KingNish/openmythos
+Most "AI security" demos just ask a model to eyeball code. cyberhackmythos is engineered
+so its output can be trusted:
+
+| Capability | How it works |
+|---|---|
+| 🔒 **Sandboxed execution** | Every command/scanner runs isolated — Docker (`--network none`, read-only rootfs, dropped caps, non-root) or a resource-limited subprocess fallback. The child environment is scrubbed to an allowlist, so **secrets are never reachable** by analyzed code. |
+| 🧰 **Real scanners** | Semgrep & Bandit (SAST), gitleaks (secrets), Trivy (dependency CVEs / IaC / secrets), hadolint (Dockerfiles) — all normalized into one finding model with cross-tool dedup and **SARIF 2.1.0** export. |
+| 📊 **Live threat intel** | Each CVE is enriched with **EPSS** (exploitation probability), **CISA KEV** (known-exploited-in-the-wild), and **CVSS** (NVD), then assigned a transparent priority: `act_now` / `attend` / `track`. |
+| 🩹 **Verified patches** | A fix is applied to an isolated copy, the code is **re-scanned**, and the patch is only trusted if the finding is gone with no higher-or-equal-severity regression. No unverified patches. |
+| 🗺️ **Prioritized reporting** | STRIDE categorization, a Mermaid risk map, and a ranked priority table lead with what's actually being exploited. |
+
+See [`SECURITY.md`](SECURITY.md) for the full threat model and isolation tiers, and
+[`docs/UPGRADE_PLAN.md`](docs/UPGRADE_PLAN.md) for the engineering roadmap.
 
 ---
 
-## 🏕️ Hackathon Categories
+## Quickstart
 
-| Category | Why OpenMythos Qualifies |
-|:---------|:-------------------------|
-| **Main Track: Backyard AI** | Solves a real, specific problem for real people: software teams need instant security auditing. The person is every developer who ships code and wants to catch vulnerabilities before attackers do. |
-| **🔌 Off the Grid** | **100% Local & Privacy-First.** The entire pipeline runs with zero cloud API dependencies just a local model endpoint. Your code never leaves your machine. |
-| **🎯 Well-Tuned** | Built on a **Qwen3.6-27B** base fine-tuned via SFT on cybersecurity dataset. The fine-tuned model: https://huggingface.co/build-small-hackathon/OpenMythos |
-| **🎨 Off-Brand** | Fully custom terminal-inspired UI all pushing far past the default Gradio look. |
+```bash
+git clone https://github.com/richard-devbot/cyberhackmythos.git
+cd cyberhackmythos
+pip install -r requirements.txt
 
-### Bonus Quests
+cp .env.example .env      # then edit .env with your model key
+python app.py
+```
 
-| Badge | Status | Notes |
-|:------|:-------|:------|
-| 🔌 Off the Grid | ✅ **Earned** | Local-first by design |
-| 🎯 Well-Tuned | ✅ **Earned** | SFT on cybersecurity data; model to be published |
-| 🎨 Off-Brand | ✅ **Earned** | Custom CSS, SVG, terminal theme |
-| 📓 Field Notes |  ✅ **Earned** | Blog post: https://huggingface.co/blog/KingNish/openmythos |
+Configure the model and controls in `.env` (see `.env.example` for every knob):
 
-## Why it's worth a look
+```ini
+OPENAI_API_KEY=nvapi-your-key-here
+OPENAI_BASE_URL=https://integrate.api.nvidia.com/v1
+OPENAI_MODEL=z-ai/glm-5.1
+```
 
-- 🔌 **100% Local & Privacy-First.** Designed as a fully open-source alternative to proprietary security intelligence layers (like Claude's Mythos model). It can be run entirely locally, requiring zero internet connectivity or external dependencies to operate.
+**For any shared/public deployment**, set app auth and prefer the Docker sandbox:
 
-## How it works
+```ini
+OPENMYTHOS_APP_AUTH=analyst:choose-a-strong-password
+OPENMYTHOS_SANDBOX_BACKEND=docker
+```
 
-A multi-stage engineering pipeline built around aggregated, industry-standard security sources:
+Build the scanner image once so scans run fully offline (network-none):
 
-| Stage | Role | Source Data / Methodology |
-|:-----:|------|---------------------------|
-| **1** | **Data Prep & Aggregation** | Incident reports, GitHub Advisory, VulnHub, and papers. Rigorously trained on BigVul-Filtered and Arvix-Filtered sets. |
-| **2** | **Initial Fine-Tuning (SFT)** | Supervised Fine-Tuning on cybersecurity tasks. Qwen3.6-27B Base (Up to 32K+ token context window). |
+```bash
+docker build -f Dockerfile.scanners -t cyberhackmythos-scanners:latest .
+export OPENMYTHOS_SANDBOX_IMAGE=cyberhackmythos-scanners:latest
+```
 
-The entire pipeline leverages highly specialized weights to ensure an elite vulnerability discovery rate. No massive API dependencies anywhere: a clever chain of targeted engineering delivers the whole security suite.
+---
 
-## 🤝 Project Contributors
+## How the agent works
 
-Developed with ❤️ during the **Hugging Face Small Gradio Hackathon** by:
+1. **Stage** — pasted code is written into a path-traversal-guarded workspace.
+2. **Scan** — `scan_all` runs every available scanner in the sandbox → normalized findings.
+3. **Enrich** — `enrich_findings` attaches EPSS + CISA KEV + CVSS and a priority.
+4. **Explain & patch** — each real finding gets an impact write-up and a unified-diff hotfix.
+5. **Verify** — `verify_patch` applies the diff to an isolated copy and re-scans to prove it.
+6. **Report** — `threat_report` / `risk_graph` / `export_sarif` for prioritized output.
 
-- **KingNish** – [HuggingFace Profile](https://huggingface.co/KingNish)
-- **Himanshu** – [HuggingFace Profile](https://huggingface.co/himanshu17HF)
+---
 
-*Built for the Build Small Hackathon. Model: [OpenMythos](https://huggingface.co/build-small-hackathon/OpenMythos) · Dataset: [CVE Vulnerabilities Detailed](https://huggingface.co/datasets/build-small-hackathon/CVE_Vulnerailities_Detailed) · [ArXiv cs.CR Filtered](https://huggingface.co/datasets/himanshu17HF/ArvixImport-Filtered-Final) · Space: [OpenMythos](https://huggingface.co/spaces/build-small-hackathon/OpenMythos)*
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q          # unit + security regression + scanner-parser tests
+ruff check .
+pip-audit -r requirements.txt
+```
+
+CI (`.github/workflows/ci.yml`) runs `pip-audit`, `ruff`, and the test suite on every push/PR.
+
+---
+
+## Credits & license
+
+cyberhackmythos is licensed under **Apache-2.0** (see [`LICENSE`](LICENSE)).
+
+The security engine — sandboxing, the scanner integration layer, the threat-intelligence
+and prioritization system, and the verified-remediation loop — was designed and built by
+**Richardson Gunde**.
+
+It builds on the original **OpenMythos** demo (Hugging Face Small Gradio Hackathon) by
+KingNish and Himanshu, which is also Apache-2.0. See [`NOTICE`](NOTICE) for attribution.

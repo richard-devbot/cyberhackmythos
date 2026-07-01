@@ -1,6 +1,6 @@
 """Verified remediation: prove a patch actually fixes the finding.
 
-The rule OpenMythos enforces: **no unverified patches**. A generated fix is only
+The rule cyberhackmythos enforces: **no unverified patches**. A generated fix is only
 trustworthy if, after applying it, (a) the target finding is gone on re-scan and
 (b) no new findings were introduced. This module runs that loop against an
 isolated copy of the workspace so the original is never mutated.

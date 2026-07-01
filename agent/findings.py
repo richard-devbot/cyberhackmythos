@@ -199,7 +199,7 @@ _SARIF_LEVEL = {
 }
 
 
-def to_sarif(findings: list[Finding], tool_name: str = "OpenMythos") -> str:
+def to_sarif(findings: list[Finding], tool_name: str = "cyberhackmythos") -> str:
     """Serialize findings as a minimal, valid SARIF 2.1.0 document."""
     rules: dict[str, dict] = {}
     results: list[dict] = []
@@ -243,7 +243,7 @@ def to_sarif(findings: list[Finding], tool_name: str = "OpenMythos") -> str:
                 "tool": {
                     "driver": {
                         "name": tool_name,
-                        "informationUri": "https://huggingface.co/spaces/build-small-hackathon/OpenMythos",
+                        "informationUri": "https://github.com/richard-devbot/cyberhackmythos",
                         "rules": list(rules.values()),
                     }
                 },

@@ -84,7 +84,7 @@ def test_sarif_is_valid_and_complete():
     doc = json.loads(to_sarif(fs))
     assert doc["version"] == "2.1.0"
     run = doc["runs"][0]
-    assert run["tool"]["driver"]["name"] == "OpenMythos"
+    assert run["tool"]["driver"]["name"] == "cyberhackmythos"
     assert run["results"][0]["ruleId"] == "rule.x"
     assert run["results"][0]["level"] == "error"
     assert run["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"] == 10

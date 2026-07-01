@@ -1,0 +1,13 @@
+cyberhackmythos
+Copyright 2026 Richardson Gunde
+
+This product includes software originally developed as "OpenMythos"
+by KingNish (Nishith Jain) and Himanshu for the Hugging Face Small
+Gradio Hackathon, licensed under the Apache License, Version 2.0.
+
+The security engine — command sandboxing and environment scrubbing,
+the SSRF guard, the scanner integration layer (Semgrep, Bandit,
+gitleaks, Trivy, hadolint) and normalized finding/SARIF model, the
+threat-intelligence enrichment and prioritization system (EPSS, CISA
+KEV, CVSS), and the verified-remediation loop — was designed and
+built by Richardson Gunde and is likewise licensed under Apache-2.0.

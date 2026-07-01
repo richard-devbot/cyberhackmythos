@@ -16,7 +16,7 @@ load_dotenv()
 gr.set_static_paths("static/")
 
 _SYSTEM_PROMPT = """\
-You are OpenMythos, an AI agent specialized in defensive cybersecurity code auditing.
+You are cyberhackmythos, an AI agent specialized in defensive cybersecurity code auditing.
 
 === Evidence over guesses ===
 You have REAL security scanners available as tools. Prefer them over eyeballing code —
@@ -81,7 +81,7 @@ agent = Agent(
 
 # Surface the active isolation tier at startup so operators know what protection
 # is actually in force (transparency: never imply isolation we don't have).
-print(f"[OpenMythos] {get_sandbox().describe()}")
+print(f"[cyberhackmythos] {get_sandbox().describe()}")
 agent.register_tool(FETCH_WEBPAGE_TOOL, SHELL_TOOL, READ_TOOL, FINAL_MESSAGE_TOOL)
 # Real security scanners (SAST, secrets, dependencies, IaC, container) exposed as
 # sandboxed tools that emit normalized findings — see agent/scanners/.
@@ -359,7 +359,7 @@ class GradioEvents:
             "conversation_contexts": state_value.get("conversation_contexts", {}),
         })
 
-with gr.Blocks(fill_width=True, title="OpenMythos Demo") as demo:
+with gr.Blocks(fill_width=True, title="cyberhackmythos") as demo:
     state = gr.State({
         "conversation_contexts": {},
         "conversations": [],
@@ -395,11 +395,11 @@ with gr.Blocks(fill_width=True, title="OpenMythos Demo") as demo:
                 <div id="landing-page">
                     <div class="landing-content">
                         <div class="landing-logo">
-                            <img src="/gradio_api/file=static/svg/logo.svg" alt="MythosHarness" width="420" height="70" />
+                            <img src="/gradio_api/file=static/svg/logo.svg" alt="cyberhackmythos" width="420" height="70" />
                         </div>
                     </div>
                     <div class="landing-prompt">
-                        <p>Made with ❤️ by <a href="http://huggingface.co/KingNish" target="_blank" style="color: var(--primary-500, #ff4b4b); text-decoration: underline;">KingNish</a> and <a href="https://huggingface.co/himanshu17HF" target="_blank" style="color: var(--primary-500, #ff4b4b); text-decoration: underline;">Himanshu</a></p>
+                        <p>AI security auditing — real scanners, live threat intel, verified patches</p>
                     </div>
                 </div>
                 """,
@@ -508,7 +508,7 @@ if __name__ == "__main__":
     # shared host — leaving this unset is only appropriate for localhost.
     _auth = config.APP_AUTH or None
     if _auth is None:
-        print("[OpenMythos] WARNING: no app auth configured (set OPENMYTHOS_APP_AUTH for shared deployments)")
+        print("[cyberhackmythos] WARNING: no app auth configured (set OPENMYTHOS_APP_AUTH for shared deployments)")
     demo.queue(default_concurrency_limit=100, max_size=100).launch(
         ssr_mode=False,
         max_threads=100,

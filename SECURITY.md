@@ -1,6 +1,6 @@
-# OpenMythos Security Model
+# cyberhackmythos Security Model
 
-OpenMythos runs an LLM agent that executes commands and fetches URLs while analyzing
+cyberhackmythos runs an LLM agent that executes commands and fetches URLs while analyzing
 **untrusted** code. This document describes the controls that keep that safe. It reflects
 **Phase 0** of `docs/UPGRADE_PLAN.md`.
 
@@ -40,7 +40,7 @@ and the agent can run shell commands. The primary threats are:
   scrubbed env. `Sandbox.isolation_level` states this plainly; the app prints it at startup.
 - **none:** no isolation; emits a loud warning. Test use only.
 
-Check the active tier: it is printed at startup (`[OpenMythos] Sandbox backend=…`).
+Check the active tier: it is printed at startup (`[cyberhackmythos] Sandbox backend=…`).
 
 ## Operator guidance
 

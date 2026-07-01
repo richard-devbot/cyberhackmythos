@@ -100,7 +100,7 @@ def safe_fetch(url: str) -> str:
             timeout=config.FETCH_TIMEOUT_SECONDS,
             allow_redirects=False,
             stream=True,
-            headers={"User-Agent": "OpenMythos/0.1 (+security-scanner)"},
+            headers={"User-Agent": "cyberhackmythos/0.1 (+security-scanner)"},
         )
         # Manual redirect handling so the destination is re-validated.
         if resp.is_redirect or resp.status_code in (301, 302, 303, 307, 308):
