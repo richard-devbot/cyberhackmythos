@@ -1,11 +1,11 @@
-# OpenMythos scanner image for the docker sandbox tier.
+# cyberhackmythos scanner image for the docker sandbox tier.
 #
 # Bakes every scanner + its rules/DB into the image so scans run with
 # `--network none` (no egress while analyzing untrusted code). Build once and
 # point the app at it:
 #
-#   docker build -f Dockerfile.scanners -t openmythos-scanners:latest .
-#   export OPENMYTHOS_SANDBOX_IMAGE=openmythos-scanners:latest
+#   docker build -f Dockerfile.scanners -t cyberhackmythos-scanners:latest .
+#   export CYBERHACKMYTHOS_SANDBOX_IMAGE=cyberhackmythos-scanners:latest
 #
 # Rebuild periodically to refresh vulnerability databases and rule sets.
 

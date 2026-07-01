@@ -23,9 +23,9 @@ and the agent can run shell commands. The primary threats are:
 | **Env scrubbing (allowlist)** | `agent/sandbox.py: build_child_env` | Commands only ever see allowlisted vars (PATH/HOME/locale). Secrets are **never** present, so they cannot be exfiltrated even if a command tries. Holds in **every** tier. |
 | **Sandbox tiers** | `agent/sandbox.py` | `docker` (network-none, read-only rootfs, `--cap-drop ALL`, `no-new-privileges`, non-root, cpu/mem/pids limits) → `subprocess` (scrubbed env + `setrlimit` CPU/mem/fsize) → `none` (warns). |
 | **SSRF guard** | `agent/netguard.py` | Every fetched URL is scheme-checked and all resolved IPs must be public; private/loopback/link-local/CGNAT are blocked. Redirects are re-validated per hop. |
-| **Iteration cap** | `agent/agent.py`, `OPENMYTHOS_MAX_ITERATIONS` | Bounds agent turns per message (default 60). |
+| **Iteration cap** | `agent/agent.py`, `CYBERHACKMYTHOS_MAX_ITERATIONS` | Bounds agent turns per message (default 60). |
 | **Bounded tool cache** | `agent/tools.py: _BoundedCache` | LRU eviction; no unbounded growth or cross-session retention. |
-| **App auth** | `app.py`, `OPENMYTHOS_APP_AUTH` | Basic auth; a startup warning fires when unset. |
+| **App auth** | `app.py`, `CYBERHACKMYTHOS_APP_AUTH` | Basic auth; a startup warning fires when unset. |
 | **Output escaping** | `app.py` | Model/error text is HTML-escaped before rendering. |
 | **Dependency pinning + audit** | `requirements.txt`, `.github/workflows/ci.yml` | Pinned versions; `pip-audit` in CI. |
 
@@ -44,8 +44,8 @@ Check the active tier: it is printed at startup (`[cyberhackmythos] Sandbox back
 
 ## Operator guidance
 
-- Set `OPENMYTHOS_APP_AUTH` for any shared/public deployment.
-- Prefer the docker backend in production; keep `OPENMYTHOS_SANDBOX_ALLOW_NETWORK=false`.
+- Set `CYBERHACKMYTHOS_APP_AUTH` for any shared/public deployment.
+- Prefer the docker backend in production; keep `CYBERHACKMYTHOS_SANDBOX_ALLOW_NETWORK=false`.
 - Rotate the model API key if it is ever exposed.
 
 ## Known limitations (tracked for later phases)

@@ -298,7 +298,7 @@ def _export_sarif_tool() -> Tool:
 
         findings = dedupe(_FINDINGS_STORE)
         sarif = to_sarif(findings)
-        path = write_file("openmythos.sarif", sarif)
+        path = write_file("cyberhackmythos.sarif", sarif)
         return f"Wrote SARIF ({len(findings)} findings) to {path}"
 
     return Tool(

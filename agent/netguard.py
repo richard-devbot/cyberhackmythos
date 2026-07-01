@@ -58,7 +58,7 @@ def validate_public_url(url: str) -> None:
     """Raise :class:`UrlNotAllowed` unless *url* is safe to fetch.
 
     Checks scheme, that a host is present, and that **all** resolved IPs are
-    public. Bypassed only when ``OPENMYTHOS_FETCH_ALLOW_PRIVATE`` is set.
+    public. Bypassed only when ``CYBERHACKMYTHOS_FETCH_ALLOW_PRIVATE`` is set.
     """
     parsed = urlparse(url)
     scheme = (parsed.scheme or "").lower()

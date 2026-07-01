@@ -1,7 +1,7 @@
 """Central, env-driven configuration for cyberhackmythos security controls.
 
 Every knob here has a safe default. Operators override via environment variables
-(prefixed ``OPENMYTHOS_``) so nothing security-relevant is hard-coded in source.
+(prefixed ``CYBERHACKMYTHOS_``) so nothing security-relevant is hard-coded in source.
 
 Design notes
 ------------
@@ -62,31 +62,31 @@ def _get_list(name: str, default: list[str]) -> list[str]:
 
 # Backend selection: "auto" (docker if available, else subprocess), "docker",
 # "subprocess", or "none" (no isolation — emits a loud warning; test use only).
-SANDBOX_BACKEND = _get_str("OPENMYTHOS_SANDBOX_BACKEND", "auto").lower()
+SANDBOX_BACKEND = _get_str("CYBERHACKMYTHOS_SANDBOX_BACKEND", "auto").lower()
 
 # Container image used by the docker backend. Phase 1 will ship a purpose-built
 # image with scanners baked in; slim python is enough for Phase 0 shell work.
-SANDBOX_IMAGE = _get_str("OPENMYTHOS_SANDBOX_IMAGE", "python:3.13-slim")
+SANDBOX_IMAGE = _get_str("CYBERHACKMYTHOS_SANDBOX_IMAGE", "python:3.13-slim")
 
 # Whether sandboxed commands may reach the network. Default OFF — the single most
 # important control against data exfiltration. Only the docker backend can truly
 # enforce this; the subprocess backend cannot and says so.
-SANDBOX_ALLOW_NETWORK = _get_bool("OPENMYTHOS_SANDBOX_ALLOW_NETWORK", False)
+SANDBOX_ALLOW_NETWORK = _get_bool("CYBERHACKMYTHOS_SANDBOX_ALLOW_NETWORK", False)
 
 # Resource ceilings for a sandboxed command.
-SANDBOX_CPU_SECONDS = _get_int("OPENMYTHOS_SANDBOX_CPU_SECONDS", 120)
-SANDBOX_CPUS = _get_float("OPENMYTHOS_SANDBOX_CPUS", 1.0)
-SANDBOX_WALL_SECONDS = _get_int("OPENMYTHOS_SANDBOX_WALL_SECONDS", 180)
-SANDBOX_MEMORY_MB = _get_int("OPENMYTHOS_SANDBOX_MEMORY_MB", 1024)
-SANDBOX_PIDS_LIMIT = _get_int("OPENMYTHOS_SANDBOX_PIDS_LIMIT", 256)
-SANDBOX_FSIZE_MB = _get_int("OPENMYTHOS_SANDBOX_FSIZE_MB", 256)
-SANDBOX_WORKDIR_MB = _get_int("OPENMYTHOS_SANDBOX_WORKDIR_MB", 512)
-SANDBOX_USER = _get_str("OPENMYTHOS_SANDBOX_USER", "nobody")
+SANDBOX_CPU_SECONDS = _get_int("CYBERHACKMYTHOS_SANDBOX_CPU_SECONDS", 120)
+SANDBOX_CPUS = _get_float("CYBERHACKMYTHOS_SANDBOX_CPUS", 1.0)
+SANDBOX_WALL_SECONDS = _get_int("CYBERHACKMYTHOS_SANDBOX_WALL_SECONDS", 180)
+SANDBOX_MEMORY_MB = _get_int("CYBERHACKMYTHOS_SANDBOX_MEMORY_MB", 1024)
+SANDBOX_PIDS_LIMIT = _get_int("CYBERHACKMYTHOS_SANDBOX_PIDS_LIMIT", 256)
+SANDBOX_FSIZE_MB = _get_int("CYBERHACKMYTHOS_SANDBOX_FSIZE_MB", 256)
+SANDBOX_WORKDIR_MB = _get_int("CYBERHACKMYTHOS_SANDBOX_WORKDIR_MB", 512)
+SANDBOX_USER = _get_str("CYBERHACKMYTHOS_SANDBOX_USER", "nobody")
 
 # Variables the child process is allowed to inherit. Note the deliberate absence
 # of anything secret. PATH/HOME/locale are enough for scanners and shell tools.
 SHELL_ENV_ALLOWLIST = _get_list(
-    "OPENMYTHOS_SHELL_ENV_ALLOWLIST",
+    "CYBERHACKMYTHOS_SHELL_ENV_ALLOWLIST",
     ["PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TERM", "TZ", "TMPDIR"],
 )
 
@@ -94,7 +94,7 @@ SHELL_ENV_ALLOWLIST = _get_list(
 # These are only added to the outer env when the docker backend is active; they
 # are never forwarded into the container.
 DOCKER_CLIENT_ENV_ALLOWLIST = _get_list(
-    "OPENMYTHOS_DOCKER_CLIENT_ENV_ALLOWLIST",
+    "CYBERHACKMYTHOS_DOCKER_CLIENT_ENV_ALLOWLIST",
     ["DOCKER_HOST", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY", "DOCKER_CONTEXT"],
 )
 
@@ -105,16 +105,16 @@ DOCKER_CLIENT_ENV_ALLOWLIST = _get_list(
 
 # Allow requests to private / loopback / link-local addresses. Default OFF to
 # block SSRF against internal services and cloud metadata (169.254.169.254).
-FETCH_ALLOW_PRIVATE = _get_bool("OPENMYTHOS_FETCH_ALLOW_PRIVATE", False)
+FETCH_ALLOW_PRIVATE = _get_bool("CYBERHACKMYTHOS_FETCH_ALLOW_PRIVATE", False)
 
 # Route fetches through the r.jina.ai reader. Off by default: it leaks target
 # URLs to a third party. When on, URLs are still validated locally first.
-FETCH_USE_JINA = _get_bool("OPENMYTHOS_FETCH_USE_JINA", False)
+FETCH_USE_JINA = _get_bool("CYBERHACKMYTHOS_FETCH_USE_JINA", False)
 
-FETCH_TIMEOUT_SECONDS = _get_float("OPENMYTHOS_FETCH_TIMEOUT_SECONDS", 20.0)
-FETCH_MAX_BYTES = _get_int("OPENMYTHOS_FETCH_MAX_BYTES", 5_000_000)
-FETCH_MAX_REDIRECTS = _get_int("OPENMYTHOS_FETCH_MAX_REDIRECTS", 5)
-FETCH_ALLOWED_SCHEMES = _get_list("OPENMYTHOS_FETCH_ALLOWED_SCHEMES", ["http", "https"])
+FETCH_TIMEOUT_SECONDS = _get_float("CYBERHACKMYTHOS_FETCH_TIMEOUT_SECONDS", 20.0)
+FETCH_MAX_BYTES = _get_int("CYBERHACKMYTHOS_FETCH_MAX_BYTES", 5_000_000)
+FETCH_MAX_REDIRECTS = _get_int("CYBERHACKMYTHOS_FETCH_MAX_REDIRECTS", 5)
+FETCH_ALLOWED_SCHEMES = _get_list("CYBERHACKMYTHOS_FETCH_ALLOWED_SCHEMES", ["http", "https"])
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ FETCH_ALLOWED_SCHEMES = _get_list("OPENMYTHOS_FETCH_ALLOWED_SCHEMES", ["http", "
 # ---------------------------------------------------------------------------
 
 # Upper bound on cached tool results (LRU eviction) to stop unbounded growth.
-TOOL_CACHE_MAX_ENTRIES = _get_int("OPENMYTHOS_TOOL_CACHE_MAX_ENTRIES", 512)
+TOOL_CACHE_MAX_ENTRIES = _get_int("CYBERHACKMYTHOS_TOOL_CACHE_MAX_ENTRIES", 512)
 
 
 # ---------------------------------------------------------------------------
@@ -143,10 +143,10 @@ def _parse_auth(raw: str) -> list[tuple[str, str]]:
     return pairs
 
 
-APP_AUTH = _parse_auth(_get_str("OPENMYTHOS_APP_AUTH", ""))
+APP_AUTH = _parse_auth(_get_str("CYBERHACKMYTHOS_APP_AUTH", ""))
 
 # Cap on agent iterations per user turn (cost / DoS control).
-MAX_ITERATIONS = _get_int("OPENMYTHOS_MAX_ITERATIONS", 60)
+MAX_ITERATIONS = _get_int("CYBERHACKMYTHOS_MAX_ITERATIONS", 60)
 
 
 # ---------------------------------------------------------------------------
@@ -155,24 +155,24 @@ MAX_ITERATIONS = _get_int("OPENMYTHOS_MAX_ITERATIONS", 60)
 # Enrichment calls go OUT from the trusted app process to fixed public API
 # hosts — never from inside the untrusted-code sandbox. Disable for fully
 # air-gapped operation.
-INTEL_ENABLED = _get_bool("OPENMYTHOS_INTEL_ENABLED", True)
-INTEL_TIMEOUT_SECONDS = _get_float("OPENMYTHOS_INTEL_TIMEOUT_SECONDS", 15.0)
-INTEL_CACHE_TTL_SECONDS = _get_int("OPENMYTHOS_INTEL_CACHE_TTL_SECONDS", 6 * 3600)
+INTEL_ENABLED = _get_bool("CYBERHACKMYTHOS_INTEL_ENABLED", True)
+INTEL_TIMEOUT_SECONDS = _get_float("CYBERHACKMYTHOS_INTEL_TIMEOUT_SECONDS", 15.0)
+INTEL_CACHE_TTL_SECONDS = _get_int("CYBERHACKMYTHOS_INTEL_CACHE_TTL_SECONDS", 6 * 3600)
 
-EPSS_API_URL = _get_str("OPENMYTHOS_EPSS_API_URL", "https://api.first.org/data/v1/epss")
+EPSS_API_URL = _get_str("CYBERHACKMYTHOS_EPSS_API_URL", "https://api.first.org/data/v1/epss")
 KEV_FEED_URL = _get_str(
-    "OPENMYTHOS_KEV_FEED_URL",
+    "CYBERHACKMYTHOS_KEV_FEED_URL",
     "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
 )
-NVD_API_URL = _get_str("OPENMYTHOS_NVD_API_URL", "https://services.nvd.nist.gov/rest/json/cves/2.0")
-NVD_API_KEY = _get_str("OPENMYTHOS_NVD_API_KEY", "")  # optional; raises rate limit
-NVD_ENABLED = _get_bool("OPENMYTHOS_NVD_ENABLED", True)
+NVD_API_URL = _get_str("CYBERHACKMYTHOS_NVD_API_URL", "https://services.nvd.nist.gov/rest/json/cves/2.0")
+NVD_API_KEY = _get_str("CYBERHACKMYTHOS_NVD_API_KEY", "")  # optional; raises rate limit
+NVD_ENABLED = _get_bool("CYBERHACKMYTHOS_NVD_ENABLED", True)
 
 # Priority thresholds (transparent, tunable). KEV always overrides to "act_now".
 # EPSS is the probability of exploitation in the next 30 days (0..1).
-EPSS_ACT_NOW = _get_float("OPENMYTHOS_EPSS_ACT_NOW", 0.5)
-EPSS_ATTEND = _get_float("OPENMYTHOS_EPSS_ATTEND", 0.1)
-CVSS_ATTEND = _get_float("OPENMYTHOS_CVSS_ATTEND", 7.0)
+EPSS_ACT_NOW = _get_float("CYBERHACKMYTHOS_EPSS_ACT_NOW", 0.5)
+EPSS_ATTEND = _get_float("CYBERHACKMYTHOS_EPSS_ATTEND", 0.1)
+CVSS_ATTEND = _get_float("CYBERHACKMYTHOS_CVSS_ATTEND", 7.0)
 
 
 # ---------------------------------------------------------------------------
@@ -181,4 +181,4 @@ CVSS_ATTEND = _get_float("OPENMYTHOS_CVSS_ATTEND", 7.0)
 # A patch fails verification if it introduces a finding at or above this severity
 # floor. Strictly-lower-severity residuals (e.g. a LOW lint after fixing a HIGH)
 # are reported but do not block — otherwise almost no real fix would ever verify.
-REMEDIATION_REGRESSION_FLOOR = _get_str("OPENMYTHOS_REMEDIATION_REGRESSION_FLOOR", "high")
+REMEDIATION_REGRESSION_FLOOR = _get_str("CYBERHACKMYTHOS_REMEDIATION_REGRESSION_FLOOR", "high")

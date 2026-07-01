@@ -503,12 +503,12 @@ with gr.Blocks(fill_width=True, title="cyberhackmythos") as demo:
 theme = gr.themes.Base(radius_size="none")
 
 if __name__ == "__main__":
-    # Auth is enabled when OPENMYTHOS_APP_AUTH is set ("user:pass,..."). A tool
+    # Auth is enabled when CYBERHACKMYTHOS_APP_AUTH is set ("user:pass,..."). A tool
     # that can run shell commands should never be exposed unauthenticated on a
     # shared host — leaving this unset is only appropriate for localhost.
     _auth = config.APP_AUTH or None
     if _auth is None:
-        print("[cyberhackmythos] WARNING: no app auth configured (set OPENMYTHOS_APP_AUTH for shared deployments)")
+        print("[cyberhackmythos] WARNING: no app auth configured (set CYBERHACKMYTHOS_APP_AUTH for shared deployments)")
     demo.queue(default_concurrency_limit=100, max_size=100).launch(
         ssr_mode=False,
         max_threads=100,

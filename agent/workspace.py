@@ -20,7 +20,7 @@ def get_workspace() -> Path:
     """Return (creating on first use) the analysis workspace directory."""
     global _WORKSPACE
     if _WORKSPACE is None:
-        _WORKSPACE = Path(tempfile.mkdtemp(prefix="openmythos_ws_"))
+        _WORKSPACE = Path(tempfile.mkdtemp(prefix="cyberhackmythos_ws_"))
         # World-readable/executable so a sandboxed non-root scanner can read the
         # mounted tree. Contains only the untrusted code under analysis.
         os.chmod(_WORKSPACE, 0o755)

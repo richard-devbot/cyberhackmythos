@@ -69,15 +69,15 @@ OPENAI_MODEL=z-ai/glm-5.1
 **For any shared/public deployment**, set app auth and prefer the Docker sandbox:
 
 ```ini
-OPENMYTHOS_APP_AUTH=analyst:choose-a-strong-password
-OPENMYTHOS_SANDBOX_BACKEND=docker
+CYBERHACKMYTHOS_APP_AUTH=analyst:choose-a-strong-password
+CYBERHACKMYTHOS_SANDBOX_BACKEND=docker
 ```
 
 Build the scanner image once so scans run fully offline (network-none):
 
 ```bash
 docker build -f Dockerfile.scanners -t cyberhackmythos-scanners:latest .
-export OPENMYTHOS_SANDBOX_IMAGE=cyberhackmythos-scanners:latest
+export CYBERHACKMYTHOS_SANDBOX_IMAGE=cyberhackmythos-scanners:latest
 ```
 
 ---

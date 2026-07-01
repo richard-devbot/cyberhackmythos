@@ -23,8 +23,8 @@ from .sandbox import Sandbox, get_sandbox
 from .scanners.base import Scanner
 from .tools import Tool
 
-_PATCH_FILE = ".openmythos.patch"
-_APPLY_OK = "__OPENMYTHOS_APPLIED_OK__"
+_PATCH_FILE = ".cyberhackmythos.patch"
+_APPLY_OK = "__CYBERHACKMYTHOS_APPLIED_OK__"
 
 
 @dataclass
@@ -63,7 +63,7 @@ class VerificationResult:
 
 def snapshot_workspace(src: str) -> str:
     """Copy the workspace into a throwaway dir so the original stays pristine."""
-    dst = tempfile.mkdtemp(prefix="openmythos_verify_")
+    dst = tempfile.mkdtemp(prefix="cyberhackmythos_verify_")
     for item in os.listdir(src):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)

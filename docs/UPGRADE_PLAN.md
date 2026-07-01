@@ -1,6 +1,6 @@
-# OpenMythos Upgrade Plan
+# cyberhackmythos Upgrade Plan
 
-**Goal:** evolve OpenMythos from an LLM-with-a-shell into a security testing tool that
+**Goal:** evolve cyberhackmythos from an LLM-with-a-shell into a security testing tool that
 professionals trust — broad audience (AppSec/pentesters, DevSecOps, researchers).
 
 **Guiding principle:** trust is the product. Experts will (a) feed it *malicious* code and
@@ -115,7 +115,7 @@ output escaping; pinned `requirements.txt` + `pip-audit`/ruff/pytest CI; `SECURI
 - **Acceptance:** SARIF validates and uploads to GitHub Code Scanning; PDF/HTML render the full report.
 
 ### Phase 5 — Where experts work
-- `cli.py`: `openmythos scan <path|git-url> --sarif out.sarif` (headless, exit-code on severity threshold).
+- `cli.py`: `cyberhackmythos scan <path|git-url> --sarif out.sarif` (headless, exit-code on severity threshold).
 - `.github/workflows/`: reusable Action + PR-comment bot; **self-scan job (dogfood)**.
 - Minimal REST API for programmatic use.
 - **Acceptance:** the Action runs on a PR and posts findings as comments; CLI exits non-zero above threshold.

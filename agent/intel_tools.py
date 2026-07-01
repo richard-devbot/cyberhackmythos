@@ -25,7 +25,7 @@ def _get_intel() -> ThreatIntel:
 
 def _enrich_handler() -> str:
     if not config.INTEL_ENABLED:
-        return "Threat intelligence is disabled (OPENMYTHOS_INTEL_ENABLED=false)."
+        return "Threat intelligence is disabled (CYBERHACKMYTHOS_INTEL_ENABLED=false)."
     findings = dedupe(get_findings_store())
     if not findings:
         return "No findings to enrich yet. Run scan_all first."
