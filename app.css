@@ -399,3 +399,13 @@ body, .gradio-container {
 .message-wrap {
   margin-bottom: 40px;
 }
+
+/* ── Verified-patch verdict badges (chat) ─────────────────────────────── */
+.cm-verdict{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11px;font-weight:700;letter-spacing:.5px;padding:4px 10px;border-radius:4px;margin-bottom:4px}
+.cm-verdict-ok{background:#0f2e1f;color:#38d9a4;border:1px solid #1c5c3f}
+.cm-verdict-bad{background:#3a1416;color:#ff7a85;border:1px solid #6b2226}
+
+/* Dashboard tab panel: let the self-styled console breathe */
+#dashboard-panel{padding:0}
+#main-tabs{margin-top:4px}

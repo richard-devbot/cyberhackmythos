@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 from agent import Agent, FETCH_WEBPAGE_TOOL, SHELL_TOOL, READ_TOOL, FINAL_MESSAGE_TOOL
 from agent import config
 from agent.sandbox import get_sandbox
-from agent.scanners import build_scanner_tools
+from agent.scanners import build_scanner_tools, get_findings_store
 from agent.intel_tools import build_intel_tools
 from agent.remediation import build_remediation_tools
+from agent.findings import dedupe
+from agent.dashboard import render_dashboard
 import os
 from pathlib import Path
 
@@ -216,8 +218,15 @@ class GradioEvents:
                         cc = snippet if len(ev["content"]) <= 500 else snippet + "\n..."
                         # Grab the tool name from the existing message
                         tool_name = display_messages[tool_call_idx]["metadata"]["title"].split("Used tool ")[-1]
+                        # verify_patch verdicts get a prominent pass/fail badge.
+                        badge = ""
+                        if ev["name"] == "verify_patch":
+                            if "✅ PATCH VERIFIED" in ev["content"]:
+                                badge = '<span class="cm-verdict cm-verdict-ok">✅ PATCH VERIFIED</span>\n\n'
+                            elif "❌ PATCH NOT VERIFIED" in ev["content"]:
+                                badge = '<span class="cm-verdict cm-verdict-bad">❌ NOT VERIFIED</span>\n\n'
                         display_messages[tool_call_idx]["content"] = (
-                            f"```\n{tool_name}({ev['arguments']})\n```\n\n"
+                            f"{badge}```\n{tool_name}({ev['arguments']})\n```\n\n"
                             f"**Output:**\n```\n{cc}\n```"
                         )
                         display_messages[tool_call_idx]["metadata"] = {
@@ -238,6 +247,7 @@ class GradioEvents:
                         state: gr.update(value=state_value),
                         send_btn: gr.update(visible=True),
                         stop_btn: gr.update(visible=False),
+                        dashboard: gr.update(value=render_dashboard(dedupe(get_findings_store()))),
                     }
                     return
 
@@ -260,6 +270,7 @@ class GradioEvents:
                 state: gr.update(value=state_value),
                 send_btn: gr.update(visible=True),
                 stop_btn: gr.update(visible=False),
+                dashboard: gr.update(value=render_dashboard(dedupe(get_findings_store()))),
             }
 
         except Exception as exc:
@@ -274,6 +285,7 @@ class GradioEvents:
                 state: gr.update(value=state_value),
                 send_btn: gr.update(visible=True),
                 stop_btn: gr.update(visible=False),
+                dashboard: gr.update(value=render_dashboard(dedupe(get_findings_store()))),
             }
 
     @staticmethod
@@ -388,54 +400,61 @@ with gr.Blocks(fill_width=True, title="cyberhackmythos") as demo:
             )
 
         with gr.Column(elem_id="chat-column"):
-
-            # Landing page shown when chat is empty with added hyperlinks
-            landing_page = gr.HTML(
-                value="""
-                <div id="landing-page">
-                    <div class="landing-content">
-                        <div class="landing-logo">
-                            <img src="/gradio_api/file=static/svg/logo.svg" alt="cyberhackmythos" width="420" height="70" />
+            with gr.Tabs(elem_id="main-tabs"):
+                with gr.Tab("Console", elem_id="tab-console"):
+                    # Landing page shown when chat is empty
+                    landing_page = gr.HTML(
+                        value="""
+                        <div id="landing-page">
+                            <div class="landing-content">
+                                <div class="landing-logo">
+                                    <img src="/gradio_api/file=static/svg/logo.svg" alt="cyberhackmythos" width="420" height="70" />
+                                </div>
+                            </div>
+                            <div class="landing-prompt">
+                                <p>AI security auditing — real scanners, live threat intel, verified patches</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="landing-prompt">
-                        <p>AI security auditing — real scanners, live threat intel, verified patches</p>
-                    </div>
-                </div>
-                """,
-                elem_id="landing-page-container",
-            )
+                        """,
+                        elem_id="landing-page-container",
+                    )
 
-            chatbot = gr.Chatbot(
-                elem_id="chatbot",
-                show_label=False,
-                buttons=[],
-                layout="bubble",
-                autoscroll=True
-            )
-            with gr.Row(elem_id="input-row"):
-                msg = gr.Textbox(
-                    placeholder="Enter your message here...",
-                    show_label=False,
-                    scale=4,
-                    container=False,
-                    max_lines=10,
-                )
-                send_btn = gr.Button(
-                    "Send",
-                    variant="primary",
-                    scale=0,
-                    min_width=40,
-                    elem_id="send-btn",
-                )
-                stop_btn = gr.Button(
-                    "Stop",
-                    variant="stop",
-                    scale=0,
-                    min_width=40,
-                    visible=False,
-                    elem_id="stop-btn",
-                )
+                    chatbot = gr.Chatbot(
+                        elem_id="chatbot",
+                        show_label=False,
+                        buttons=[],
+                        layout="bubble",
+                        autoscroll=True
+                    )
+                    with gr.Row(elem_id="input-row"):
+                        msg = gr.Textbox(
+                            placeholder="Enter your message here...",
+                            show_label=False,
+                            scale=4,
+                            container=False,
+                            max_lines=10,
+                        )
+                        send_btn = gr.Button(
+                            "Send",
+                            variant="primary",
+                            scale=0,
+                            min_width=40,
+                            elem_id="send-btn",
+                        )
+                        stop_btn = gr.Button(
+                            "Stop",
+                            variant="stop",
+                            scale=0,
+                            min_width=40,
+                            visible=False,
+                            elem_id="stop-btn",
+                        )
+
+                with gr.Tab("Dashboard", elem_id="tab-dashboard"):
+                    dashboard = gr.HTML(
+                        value=render_dashboard([]),
+                        elem_id="dashboard-panel",
+                    )
 
     new_chat_btn.click(
         fn=GradioEvents.new_chat,
@@ -458,12 +477,12 @@ with gr.Blocks(fill_width=True, title="cyberhackmythos") as demo:
     submit_event = send_btn.click(
         fn=GradioEvents.stream_response,
         inputs=[msg, state],
-        outputs=[msg, chatbot, state, conv_choice, send_btn, stop_btn],
+        outputs=[msg, chatbot, state, conv_choice, send_btn, stop_btn, dashboard],
     )
     msg.submit(
         fn=GradioEvents.stream_response,
         inputs=[msg, state],
-        outputs=[msg, chatbot, state, conv_choice, send_btn, stop_btn],
+        outputs=[msg, chatbot, state, conv_choice, send_btn, stop_btn, dashboard],
     )
 
     stop_btn.click(
