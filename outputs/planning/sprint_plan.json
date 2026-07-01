@@ -1,0 +1,59 @@
+{
+  "project": "cyberhackmythos",
+  "generated_at": "2026-07-01T08:46:29Z",
+  "planner": "sdlc-planning (agent 04)",
+  "source": "web-researched; issues raised at github.com/richard-devbot/cyberhackmythos/issues",
+  "status_context": {
+    "completed": ["Phase 0 sandbox/safety", "Phase 1 scanners", "Phase 2 intel", "Phase 3 verified remediation"],
+    "tests_passing": 70
+  },
+  "team_composition": [
+    {"role": "Full-stack / UI engineer", "focus": "Gradio UI, dashboard, visualization", "allocation": 1.0},
+    {"role": "Security backend engineer", "focus": "reporting, CLI, scanners, verifier", "allocation": 1.0},
+    {"role": "DevOps / CI engineer", "focus": "GitHub Action, SARIF upload, benchmark infra", "allocation": 0.5}
+  ],
+  "milestones": [
+    {"id": "M1", "name": "UI/UX overhaul", "issues": [1, 2, 3], "outcome": "Findings dashboard, risk/STRIDE panels, verified-patch diff viewer"},
+    {"id": "M2", "name": "Reporting", "issues": [4], "outcome": "Self-contained HTML/PDF report from findings"},
+    {"id": "M3", "name": "Workflow integration", "issues": [5, 6, 10], "outcome": "CLI + GitHub Action + PR annotations + SARIF upload; SBOM/more scanners"},
+    {"id": "M4", "name": "Quality & proof", "issues": [7, 8], "outcome": "FP verifier + benchmark with published precision/recall"},
+    {"id": "M5", "name": "Security close-out", "issues": [9], "outcome": "Remaining audit items resolved"}
+  ],
+  "sprints": [
+    {
+      "sprint": 1,
+      "theme": "UI/UX first (user priority)",
+      "issues": [1, 2, 3],
+      "rationale": "Highest user-visible value; the engine already produces the data these views need.",
+      "deliverables": ["accessibility-first findings dashboard", "risk graph + severity distribution + STRIDE panels", "tool-call cards + verified-patch diff viewer"]
+    },
+    {
+      "sprint": 2,
+      "theme": "Reporting + CLI",
+      "issues": [4, 5],
+      "deliverables": ["export_report (HTML/PDF)", "cyberhackmythos CLI with severity gate"]
+    },
+    {
+      "sprint": 3,
+      "theme": "CI integration + coverage",
+      "issues": [6, 10],
+      "deliverables": ["GitHub Action + PR annotations + SARIF upload (partialFingerprints)", "Syft SBOM + osv-scanner/checkov/gosec/trufflehog"]
+    },
+    {
+      "sprint": 4,
+      "theme": "Quality, proof, security close-out",
+      "issues": [7, 8, 9],
+      "deliverables": ["adversarial FP verifier", "benchmark harness (CASTLE/BigVul)", "MCP validation, localStorage, DNS-rebind, audit logging"]
+    }
+  ],
+  "dependencies": [
+    {"from": 6, "needs": [5, 10], "why": "Action wraps the CLI; SARIF upload needs partialFingerprints"},
+    {"from": 8, "needs": [7], "why": "Benchmark measures the verifier's FP reduction"},
+    {"from": 2, "needs": [], "why": "Uses existing agent/graph.py output"}
+  ],
+  "risks": [
+    {"risk": "Docker daemon unavailable in target deploy (e.g. HF Spaces)", "mitigation": "subprocess fallback already ships; scanners degrade gracefully"},
+    {"risk": "Live intel API rate limits (NVD 5/30s without key)", "mitigation": "batch EPSS, cache KEV, optional NVD API key"},
+    {"risk": "Benchmark dataset licensing", "mitigation": "prefer CASTLE + held-out subset; document provenance"}
+  ]
+}
