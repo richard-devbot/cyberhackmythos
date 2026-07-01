@@ -9,7 +9,8 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import IO
+
+from .sandbox import Sandbox, get_sandbox
 
 IDLE_TIMEOUT_SECONDS = 15 * 60  # 15 minutes
 
@@ -84,10 +85,11 @@ class ShellSession:
 class ShellManager:
     """Manages multiple shell sessions with streaming output."""
 
-    def __init__(self, default_timeout: float = 15.0) -> None:
+    def __init__(self, default_timeout: float = 15.0, sandbox: Sandbox | None = None) -> None:
         self.sessions: dict[str, ShellSession] = {}
         self._lock = threading.Lock()
         self.default_timeout = default_timeout
+        self.sandbox = sandbox or get_sandbox()
         self._cleanup_thread = threading.Thread(
             target=self._cleanup_loop, daemon=True
         )
@@ -128,23 +130,27 @@ class ShellManager:
             # Create a unique temp directory for this session
             temp_dir = Path(tempfile.mkdtemp(prefix=f"shell_{session_id}_"))
 
-            # Merge env with inherited environment
-            import os
-            process_env = os.environ.copy()
+            # Resolve the command through the sandbox. This scrubs the environment
+            # to an allowlist (so secrets like OPENAI_API_KEY are never visible to
+            # the command), applies resource limits, and — on the docker backend —
+            # blocks network egress and drops privileges. Any caller-supplied env
+            # is passed as explicit non-secret extras.
+            prepared = self.sandbox.prepare(command, str(temp_dir))
+            child_env = dict(prepared.env)
             if env:
-                process_env.update(env)
+                child_env.update(env)
 
-            # Use shell=True for interactive commands
             process = subprocess.Popen(
-                command,
-                shell=True,
+                prepared.args,
+                shell=prepared.shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                cwd=str(temp_dir),
-                env=process_env,
+                cwd=prepared.cwd,
+                env=child_env,
+                preexec_fn=prepared.preexec_fn,
             )
 
             session = ShellSession(

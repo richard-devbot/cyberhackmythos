@@ -1,7 +1,12 @@
-from markitdown import MarkItDown
 from typing import Any, Callable, Generator, get_type_hints
+from collections import OrderedDict
 import inspect
-import requests
+import time
+import uuid as _uuid
+
+from . import config
+from .netguard import safe_fetch, validate_public_url, UrlNotAllowed
+from .shell import get_shell_manager
 
 
 def python_type_to_json_schema(tp: type) -> str:
@@ -157,14 +162,25 @@ def fetch_webpage(url: str) -> str:
 
     url (required): The URL to fetch
     """
+    # SSRF guard: refuse internal / loopback / link-local (cloud metadata) targets
+    # before any network call, in-process or via a third-party reader.
     try:
-        jina_ai_url = "https://r.jina.ai/"
-        response = requests.get(jina_ai_url + url)
-        response.raise_for_status()
-        return response.text
-    except Exception as e:
-        md = MarkItDown()
-        return md.convert(url).text_content
+        validate_public_url(url)
+    except UrlNotAllowed as exc:
+        return f"Error: URL blocked by SSRF guard: {exc}"
+
+    # Optional third-party reader (off by default — it leaks target URLs to jina).
+    # The inner URL was already validated as public above.
+    if config.FETCH_USE_JINA:
+        try:
+            return safe_fetch("https://r.jina.ai/" + url)
+        except Exception:
+            pass
+
+    try:
+        return safe_fetch(url)
+    except Exception as exc:
+        return f"Error fetching {url}: {exc}"
 
 FETCH_WEBPAGE_TOOL = fetch_webpage  # @tool already makes it a Tool instance
 
@@ -172,10 +188,6 @@ FETCH_WEBPAGE_TOOL = fetch_webpage  # @tool already makes it a Tool instance
 # ---------------------------------------------------------------------------
 # Shell tool (streamable)
 # ---------------------------------------------------------------------------
-
-import time
-import uuid as _uuid
-from .shell import get_shell_manager
 
 
 def _shell_handler(
@@ -280,8 +292,24 @@ SHELL_TOOL = Tool(
 )
 
 
-# Shared cache for read_tool_response - agent writes, tool reads
-_TOOL_RESULTS_CACHE: dict[str, str] = {}
+# Shared cache for read_tool_response - agent writes, tool reads.
+# LRU-bounded so it cannot grow without limit across sessions.
+class _BoundedCache(OrderedDict):
+    """Dict with LRU eviction once it exceeds ``maxsize`` entries."""
+
+    def __init__(self, maxsize: int) -> None:
+        super().__init__()
+        self._maxsize = max(1, maxsize)
+
+    def __setitem__(self, key: str, value: str) -> None:
+        if key in self:
+            super().__delitem__(key)
+        super().__setitem__(key, value)
+        while len(self) > self._maxsize:
+            self.popitem(last=False)
+
+
+_TOOL_RESULTS_CACHE: "OrderedDict[str, str]" = _BoundedCache(config.TOOL_CACHE_MAX_ENTRIES)
 
 
 def _read_tool_handler(tool_call_id: str, start_line: int, num_lines: int = 50) -> str:

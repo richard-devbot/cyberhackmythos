@@ -1,4 +1,6 @@
-gradio
-openai
-python-dotenv
-markitdown
+gradio==6.19.0
+openai==2.41.1
+python-dotenv==1.2.2
+markitdown==0.1.6
+httpx==0.28.1
+requests==2.34.2
