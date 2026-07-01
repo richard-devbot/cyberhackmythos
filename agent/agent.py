@@ -4,7 +4,7 @@ from typing import Any, Generator
 from openai import OpenAI
 
 from .tools import Tool, _TOOL_RESULTS_CACHE
-from .mcp import MCPClient, load_mcp_tools, load_all_mcp_tools
+from .mcp import load_mcp_tools, load_all_mcp_tools
 
 # ---------------------------------------------------------------------------
 # Streaming event contract
@@ -35,6 +35,10 @@ class Agent:
         model: str,
         max_iterations: int = 150,
         system_prompt: str | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | None = None,
+        thinking_token_budget: int | None = None,
     ) -> None:
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
@@ -42,6 +46,12 @@ class Agent:
         self._final_tool_name: str | None = None
         self._max_iterations = max_iterations
         self.system_prompt = system_prompt
+        self.temperature = temperature
+        self.top_p = top_p
+        self.max_tokens = max_tokens
+        # Provider-specific: only sent via extra_body when explicitly set.
+        # NVIDIA NIM / glm-5.1 rejects unknown params, so leave None for those.
+        self.thinking_token_budget = thinking_token_budget
 
     # ------------------------------------------------------------------
     # Tool registration
@@ -110,8 +120,15 @@ class Agent:
                 model=self.model,
                 messages=messages,
                 stream=True,
-                extra_body={"thinking_token_budget": 2000}
             )
+            if self.temperature is not None:
+                kwargs["temperature"] = self.temperature
+            if self.top_p is not None:
+                kwargs["top_p"] = self.top_p
+            if self.max_tokens is not None:
+                kwargs["max_tokens"] = self.max_tokens
+            if self.thinking_token_budget is not None:
+                kwargs["extra_body"] = {"thinking_token_budget": self.thinking_token_budget}
             if specs:
                 kwargs["tools"] = specs
 
@@ -236,11 +253,9 @@ class Agent:
                     # Streamable tool — yield partial results
                     if tool_obj.streamable:
                         accumulated = ""
-                        last_chunk = ""
                         try:
                             for chunk in tool_obj.stream(**targs):
                                 accumulated += chunk
-                                last_chunk = chunk
                                 # Truncate display but keep full for read_tool_response
                                 display = accumulated
                                 if len(display) > 5_000:
