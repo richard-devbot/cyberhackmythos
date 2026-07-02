@@ -18,7 +18,7 @@ license: apache-2.0
 finding with live threat intelligence, ranks what to fix first, and proves its patches
 actually work — before it ever calls something "fixed."**
 
-It runs an LLM agent (NVIDIA NIM / `gpt-oss-120b`) inside a locked-down sandbox and gives it
+It runs an LLM agent (NVIDIA NIM / `nemotron-3-nano`, or a self-hosted security model) inside a locked-down sandbox and gives it
 a toolbox of industry-standard scanners plus a threat-intel layer. The result is
 **evidence, not guesses**: each finding is backed by a real tool, a CWE/CVE, and a
 defensible priority — and each hotfix is verified by re-scanning before it's shown to you.
@@ -63,7 +63,7 @@ Configure the model and controls in `.env` (see `.env.example` for every knob):
 ```ini
 OPENAI_API_KEY=nvapi-your-key-here
 OPENAI_BASE_URL=https://integrate.api.nvidia.com/v1
-OPENAI_MODEL=openai/gpt-oss-120b
+OPENAI_MODEL=nvidia/nemotron-3-nano-30b-a3b
 ```
 
 **For any shared/public deployment**, set app auth and prefer the Docker sandbox:
