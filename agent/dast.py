@@ -25,6 +25,19 @@ from .scanners.base import _format, get_findings_store
 from .tools import Tool
 
 
+# Session "arm" gate: even with DAST enabled + an allowlisted target, a live scan
+# only fires after the operator explicitly arms it in the UI (confirming authorization).
+_ARMED = {"on": False}
+
+
+def set_armed(value: bool) -> None:
+    _ARMED["on"] = bool(value)
+
+
+def is_armed() -> bool:
+    return _ARMED["on"]
+
+
 def authorized_host(url: str) -> tuple[bool, str]:
     """Return (allowed, host). A host matches if it equals an allowlist entry, or
     an entry starts with '.' and the host ends with it (subdomain rule)."""
@@ -94,9 +107,10 @@ class DastRunner:
 
     def scan(self, url: str) -> list[Finding]:
         # nuclei with JSONL output; network egress is required and enabled here.
+        # Rate-limited + bounded concurrency to stay a good citizen against a live host.
         cmd = (
             f"HOME=/tmp nuclei -u {url} -jsonl -silent -no-color "
-            f"-timeout 10 -retries 1 || true"
+            f"-timeout 10 -retries 1 -rate-limit 40 -c 20 || true"
         )
         result = self.sandbox.run_capture(
             cmd, "/tmp", timeout=config.DAST_TIMEOUT_SECONDS, network=True
@@ -119,6 +133,9 @@ def build_dast_tools() -> list[Tool]:
     def handler(url: str) -> str:
         if not config.DAST_ENABLED:
             return "DAST is disabled. Set CYBERHACKMYTHOS_DAST_ENABLED=true to enable live testing."
+        if not is_armed():
+            return ("Live testing is not armed. In the UI, toggle 'Live testing' on and confirm "
+                    "you're authorized to test the configured targets before scanning.")
         if not url or not url.strip():
             return "Error: provide a target URL."
         allowed, host = authorized_host(url)

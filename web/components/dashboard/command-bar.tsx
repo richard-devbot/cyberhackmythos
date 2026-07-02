@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getMeta, type Meta } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ModelSwitcher } from "@/components/dashboard/model-switcher";
+import { DastArm } from "@/components/dashboard/dast-arm";
 import { ShieldCheck, Terminal, LayoutDashboard } from "lucide-react";
 
 export function CommandBar({ active }: { active: "console" | "dashboard" }) {
@@ -39,6 +40,7 @@ export function CommandBar({ active }: { active: "console" | "dashboard" }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-4 font-mono text-[11px] text-muted-foreground">
+          <DastArm />
           <ModelSwitcher />
           {meta?.isolation && (
             <span className="hidden items-center gap-1.5 lg:flex" title="Command sandbox">

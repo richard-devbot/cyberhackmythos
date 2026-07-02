@@ -15,7 +15,19 @@ export interface Meta {
   scanners?: string[];
   model?: string;
   mcp_enabled?: boolean;
+  dast_enabled?: boolean;
+  dast_armed?: boolean;
+  authorized_targets?: string[];
   offline?: boolean;
+}
+
+export async function armDast(armed: boolean): Promise<{ ok: boolean; armed?: boolean; error?: string }> {
+  const r = await fetch("/api/dast/arm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ armed }),
+  });
+  return r.json();
 }
 
 // Reads the SSE stream from the proxy route and dispatches each parsed event.

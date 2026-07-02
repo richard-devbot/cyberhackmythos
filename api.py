@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+from agent import config  # noqa: E402
 from agent.findings import dedupe, summarize  # noqa: E402
 from agent.sandbox import get_sandbox  # noqa: E402
 from agent.scanners import all_scanners, clear_findings_store, get_findings_store  # noqa: E402
@@ -114,6 +115,8 @@ def clear() -> JSONResponse:
 @app.get("/api/meta")
 def meta() -> JSONResponse:
     sb = get_sandbox()
+    from agent import dast
+
     return JSONResponse(
         {
             "isolation": sb.isolation_level,
@@ -121,8 +124,27 @@ def meta() -> JSONResponse:
             "scanners": [s.name for s in all_scanners()],
             "model": agent.model,
             "mcp_enabled": _ENABLE_MCP,
+            "dast_enabled": config.DAST_ENABLED,
+            "dast_armed": dast.is_armed(),
+            "authorized_targets": config.AUTHORIZED_TARGETS,
         }
     )
+
+
+class ArmRequest(BaseModel):
+    armed: bool
+
+
+@app.post("/api/dast/arm")
+def arm_dast(req: ArmRequest) -> JSONResponse:
+    """Arm/disarm live testing for this session. Only meaningful when DAST is
+    enabled and targets are allowlisted; the operator confirms authorization here."""
+    from agent import dast
+
+    if not config.DAST_ENABLED:
+        return JSONResponse({"ok": False, "error": "DAST is not enabled on the server"}, status_code=400)
+    dast.set_armed(req.armed)
+    return JSONResponse({"ok": True, "armed": dast.is_armed(), "targets": config.AUTHORIZED_TARGETS})
 
 
 @app.get("/api/models")

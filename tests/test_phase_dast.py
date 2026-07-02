@@ -35,9 +35,26 @@ def test_empty_allowlist_denies_everything(monkeypatch):
 def test_dast_tool_refuses_unauthorized(monkeypatch):
     monkeypatch.setattr(config, "DAST_ENABLED", True)
     monkeypatch.setattr(config, "AUTHORIZED_TARGETS", ["dev.example.com"])
+    monkeypatch.setattr(dast, "is_armed", lambda: True)  # past the arm gate
     tool = dast.build_dast_tools()[0]
     out = tool.handler(url="https://not-authorized.com/")
     assert "Refused" in out and "allowlist" in out
+
+
+def test_dast_requires_arming(monkeypatch):
+    monkeypatch.setattr(config, "DAST_ENABLED", True)
+    monkeypatch.setattr(config, "AUTHORIZED_TARGETS", ["dev.example.com"])
+    monkeypatch.setattr(dast, "is_armed", lambda: False)
+    tool = dast.build_dast_tools()[0]
+    # Even an authorized target is refused until the operator arms live testing.
+    assert "not armed" in tool.handler(url="https://dev.example.com/").lower()
+
+
+def test_dast_arm_toggle():
+    dast.set_armed(True)
+    assert dast.is_armed() is True
+    dast.set_armed(False)
+    assert dast.is_armed() is False
 
 
 def test_dast_tool_disabled_message(monkeypatch):
