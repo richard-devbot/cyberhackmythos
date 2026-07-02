@@ -64,6 +64,7 @@ class Category(str, Enum):
     DEPENDENCY = "dependency"
     IAC = "iac"
     CONTAINER = "container"
+    WEB = "web"  # live/DAST findings (nuclei etc.)
     MISC = "misc"
 
 

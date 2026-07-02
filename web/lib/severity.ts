@@ -25,6 +25,7 @@ export const CATEGORY_META: Record<Category, { tag: string; label: string }> = {
   dependency: { tag: "DEP", label: "Dependency" },
   iac: { tag: "IAC", label: "Infrastructure" },
   container: { tag: "IMG", label: "Container" },
+  web: { tag: "WEB", label: "Live / DAST" },
   misc: { tag: "—", label: "Other" },
 };
 
@@ -72,6 +73,7 @@ const CATEGORY_STRIDE: Record<Category, string> = {
   dependency: "Elevation of Privilege",
   iac: "Elevation of Privilege",
   container: "Elevation of Privilege",
+  web: "Tampering",
   misc: "Tampering",
 };
 

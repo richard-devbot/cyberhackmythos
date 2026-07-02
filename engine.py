@@ -55,6 +55,9 @@ Remediation verify_patch(diff, ...) — apply a fix to an isolated copy, re-scan
 Reporting   export_sarif — write findings to a SARIF report.
 Explore     shell(command) — read-only exploration (grep/cat/ls) in the sandbox.
 Research    fetch_webpage(url) — look up advisory/CVE details (SSRF-guarded).
+Live/DAST   dast_scan(url) — live scan (nuclei) of a running app. Available only when DAST
+            is enabled, and it REFUSES any host not on the authorization allowlist. Use it
+            only for targets the operator is authorized to test.
 Utility     read_tool_response — page through a truncated tool result.
 
 # Workflow
@@ -111,6 +114,12 @@ def build_agent(enable_mcp: bool = True) -> Agent:
     agent.register_tool(*build_scanner_tools())
     agent.register_tool(*build_intel_tools())
     agent.register_tool(*build_remediation_tools())
+    # Live testing (DAST) is registered only when explicitly enabled. The tool
+    # itself still refuses any target not on the authorization allowlist.
+    if config.DAST_ENABLED:
+        from agent.dast import build_dast_tools
+
+        agent.register_tool(*build_dast_tools())
     if enable_mcp:
         agent.register_all_mcp()
     agent.set_final_message_tool()

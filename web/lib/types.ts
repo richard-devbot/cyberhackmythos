@@ -3,7 +3,7 @@
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info" | "unknown";
 export type Priority = "act_now" | "attend" | "track";
-export type Category = "sast" | "secret" | "dependency" | "iac" | "container" | "misc";
+export type Category = "sast" | "secret" | "dependency" | "iac" | "container" | "web" | "misc";
 
 export interface Finding {
   tool: string;

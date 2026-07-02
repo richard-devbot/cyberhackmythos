@@ -41,6 +41,7 @@ _CATEGORY_TAG = {
     Category.DEPENDENCY: "DEP",
     Category.IAC: "IAC",
     Category.CONTAINER: "IMG",
+    Category.WEB: "WEB",
     Category.MISC: "—",
 }
 

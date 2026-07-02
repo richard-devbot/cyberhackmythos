@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates git tar \
+        curl ca-certificates git tar unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Python-based scanners (SAST) -----------------------------------------
@@ -37,6 +37,14 @@ ENV TRIVY_CACHE_DIR=/opt/trivy-cache
 ARG HADOLINT_VERSION=2.12.0
 RUN curl -sSfL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
       -o /usr/local/bin/hadolint && chmod +x /usr/local/bin/hadolint
+
+# --- nuclei (live/DAST web scanner — used only for authorized targets) ----
+ARG NUCLEI_VERSION=3.3.7
+RUN curl -sSfL "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION}_linux_amd64.zip" \
+      -o /tmp/nuclei.zip \
+    && (cd /usr/local/bin && unzip -o /tmp/nuclei.zip nuclei) \
+    && rm /tmp/nuclei.zip \
+    && HOME=/tmp nuclei -update-templates 2>/dev/null || true
 
 # Pre-fetch semgrep registry rules so `--config auto` works offline.
 RUN semgrep --version && (semgrep scan --config auto --dryrun /tmp 2>/dev/null || true)

@@ -182,3 +182,18 @@ CVSS_ATTEND = _get_float("CYBERHACKMYTHOS_CVSS_ATTEND", 7.0)
 # floor. Strictly-lower-severity residuals (e.g. a LOW lint after fixing a HIGH)
 # are reported but do not block — otherwise almost no real fix would ever verify.
 REMEDIATION_REGRESSION_FLOOR = _get_str("CYBERHACKMYTHOS_REMEDIATION_REGRESSION_FLOOR", "high")
+
+
+# ---------------------------------------------------------------------------
+# Live testing / DAST — OFF by default, scoped to authorized hosts only.
+# ---------------------------------------------------------------------------
+# DAST reaches LIVE systems, so it stays disabled unless the operator both enables
+# it AND lists the target host in the authorization allowlist. A scan of any host
+# not on the list is refused. This is what keeps the tool from being pointed at
+# systems you are not permitted to test — only run it against your own assets or
+# targets you have written authorization for.
+DAST_ENABLED = _get_bool("CYBERHACKMYTHOS_DAST_ENABLED", False)
+# Comma-separated hostnames you are authorized to test, e.g. "dev.example.com,staging.example.com".
+# A leading "." allows subdomains: ".example.com" authorizes any *.example.com host.
+AUTHORIZED_TARGETS = _get_list("CYBERHACKMYTHOS_AUTHORIZED_TARGETS", [])
+DAST_TIMEOUT_SECONDS = _get_int("CYBERHACKMYTHOS_DAST_TIMEOUT_SECONDS", 600)

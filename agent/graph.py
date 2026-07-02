@@ -43,6 +43,7 @@ _CATEGORY_STRIDE: dict[Category, str] = {
     Category.DEPENDENCY: ELEVATION,
     Category.IAC: ELEVATION,
     Category.CONTAINER: ELEVATION,
+    Category.WEB: TAMPERING,
     Category.MISC: TAMPERING,
 }
 
