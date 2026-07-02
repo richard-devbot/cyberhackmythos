@@ -70,3 +70,27 @@ export async function getMeta(): Promise<Meta> {
   const r = await fetch("/api/meta", { cache: "no-store" });
   return r.json();
 }
+
+export interface ModelOption {
+  id: string;
+  label: string;
+  note?: string;
+}
+
+export async function getModels(): Promise<{ current: string; recommended: ModelOption[] }> {
+  const r = await fetch("/api/models", { cache: "no-store" });
+  return r.json();
+}
+
+export async function setModel(
+  model: string,
+  base_url?: string,
+  api_key?: string,
+): Promise<{ ok: boolean; model?: string; error?: string }> {
+  const r = await fetch("/api/model", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, base_url, api_key }),
+  });
+  return r.json();
+}

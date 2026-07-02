@@ -53,6 +53,22 @@ class ChatRequest(BaseModel):
     message: str
 
 
+class SetModelRequest(BaseModel):
+    model: str
+    base_url: str | None = None  # for self-hosted endpoints (e.g. Colab-tunneled vLLM/Ollama)
+    api_key: str | None = None
+
+
+# Curated, NIM-verified picks for the dropdown (plus a self-hosted escape hatch).
+RECOMMENDED_MODELS = [
+    {"id": "openai/gpt-oss-120b", "label": "gpt-oss-120b · balanced default",
+     "note": "reasons + answers well; may refuse some offensive tasks"},
+    {"id": "deepseek-ai/deepseek-v4-pro", "label": "deepseek-v4-pro · strong coder", "note": ""},
+    {"id": "nvidia/nemotron-3-nano-30b-a3b", "label": "nemotron-3-nano · fast", "note": "3B active"},
+    {"id": "qwen/qwen3-next-80b-a3b-instruct", "label": "qwen3-next-80b · fast", "note": "3B active"},
+]
+
+
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
 
@@ -103,10 +119,35 @@ def meta() -> JSONResponse:
             "isolation": sb.isolation_level,
             "backend": sb.backend,
             "scanners": [s.name for s in all_scanners()],
-            "model": os.getenv("OPENAI_MODEL", "unknown"),
+            "model": agent.model,
             "mcp_enabled": _ENABLE_MCP,
         }
     )
+
+
+@app.get("/api/models")
+def models() -> JSONResponse:
+    return JSONResponse({"current": agent.model, "recommended": RECOMMENDED_MODELS})
+
+
+@app.post("/api/model")
+def set_model(req: SetModelRequest) -> JSONResponse:
+    """Switch the active model at runtime — no restart, no tool re-registration.
+
+    Optionally repoint at a self-hosted OpenAI-compatible endpoint (base_url/api_key),
+    e.g. a Colab-tunneled vLLM/Ollama serving WhiteRabbitNeo or OpenMythos.
+    """
+    from openai import OpenAI
+
+    if not req.model.strip():
+        return JSONResponse({"ok": False, "error": "model is required"}, status_code=400)
+    agent.model = req.model.strip()
+    if req.base_url:
+        agent.client = OpenAI(
+            base_url=req.base_url.strip(),
+            api_key=(req.api_key or os.getenv("OPENAI_API_KEY") or "not-needed").strip(),
+        )
+    return JSONResponse({"ok": True, "model": agent.model})
 
 
 if __name__ == "__main__":
