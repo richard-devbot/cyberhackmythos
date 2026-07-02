@@ -21,7 +21,12 @@ export function ModelSwitcher() {
   const [current, setCurrent] = useState("");
   const [busy, setBusy] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
-  const [form, setForm] = useState({ model: "", baseUrl: "", apiKey: "" });
+  // Pre-filled with the security-model defaults — paste your Colab tunnel URL into Base URL.
+  const [form, setForm] = useState({
+    model: "monotykamary/whiterabbitneo-v1.5a",
+    baseUrl: "",
+    apiKey: "ollama",
+  });
 
   useEffect(() => {
     getModels()
